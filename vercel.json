@@ -5,10 +5,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "includeFiles": [
-        "churn_platform/presentation/**",
-        "data/**"
-      ]
+      "includeFiles": "{churn_platform/presentation,data}/**"
     }
   }
 }
