@@ -1,19 +1,17 @@
 from typing import List, Tuple
 from churn_platform.domain.interfaces.i_churn_core import IChurnCore
+from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.retention_playbook import RetentionPlaybook
-from churn_platform.infrastructure.ai.qwen_gateway import QwenGateway
 from churn_platform.infrastructure.ai.prompts.saas_prompts import SAAS_CORE_SYSTEM_PROMPT
 import json
 
 class SaasCore(IChurnCore):
-    def __init__(self, gateway: QwenGateway):
+    def __init__(self, gateway: IAIGateway):
         self.gateway = gateway
 
     async def analyze(self, features: List[CustomerFeatures]) -> List[Tuple[ChurnPrediction, RetentionPlaybook]]:
-        # Batching features to send to LLM (simplified for MVP: send all at once or batch by 10)
-        # In a real system, we'd batch to avoid context limits.
         features_json = json.dumps([f.model_dump() for f in features], default=str)
         user_prompt = f"Analyze these customer features:\n{features_json}"
         

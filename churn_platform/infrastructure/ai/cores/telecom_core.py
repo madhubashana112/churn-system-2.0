@@ -1,14 +1,14 @@
 from typing import List, Tuple
 from churn_platform.domain.interfaces.i_churn_core import IChurnCore
+from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.retention_playbook import RetentionPlaybook
-from churn_platform.infrastructure.ai.qwen_gateway import QwenGateway
 from churn_platform.infrastructure.ai.prompts.telecom_prompts import TELECOM_CORE_SYSTEM_PROMPT
 import json
 
 class TelecomCore(IChurnCore):
-    def __init__(self, gateway: QwenGateway):
+    def __init__(self, gateway: IAIGateway):
         self.gateway = gateway
 
     async def analyze(self, features: List[CustomerFeatures]) -> List[Tuple[ChurnPrediction, RetentionPlaybook]]:
