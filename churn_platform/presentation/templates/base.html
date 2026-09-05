@@ -13,7 +13,7 @@
 <body class="app-shell"
       style="{% block theme_vars %}--accent:#4f46e5;--accent-soft:#eef2ff;--accent-ink:#312e81;{% endblock %}"
       data-sector="{{ sector_key | default('', true) }}"
-      data-tenant-id="{{ tenant_id | default('', true) }}">
+      data-tenant-id="{{ tenant_id | default('', true) }}"{% block body_attrs %}{% endblock %}>
 
 <aside class="sidebar">
     <div>
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <nav>
+    {% block sidebar_nav %}<nav>
         <p class="sidebar__section">Workspace</p>
         <div class="sidebar__nav">
             <button type="button" class="sidebar__link is-active" data-scroll-to="upload-panel">
@@ -42,7 +42,7 @@
                 <span>&#9776;</span> Customers
             </button>
         </div>
-    </nav>
+    </nav>{% endblock %}
 
     <nav>
         <p class="sidebar__section">This sector</p>
@@ -64,7 +64,7 @@
         <p class="page-head__subtitle">{% block page_subtitle %}{% endblock %}</p>
     </header>
 
-    <div id="banner-slot" class="banner-slot"></div>
+    {% block main_content %}<div id="banner-slot" class="banner-slot"></div>
 
     <!-- Upload ---------------------------------------------------------- -->
     <section class="panel section" id="upload-panel">
@@ -87,14 +87,19 @@
                    accept=".csv,.tsv,.txt,.xlsx,.xlsm">
 
             <div class="flex flex-wrap items-center gap-3 mt-4">
-                <button type="button" id="analyze-btn" class="btn btn--primary" disabled>
-                    <span id="analyze-label">Discover schema &amp; analyze churn</span>
+                <button type="button" id="analyze-ai-btn" class="btn btn--primary" disabled>
+                    Analyze with AI model
                 </button>
+                <button type="button" id="analyze-system-btn" class="btn btn--ghost" disabled>
+                    Analyze with system model
+                </button>
+                <button type="button" id="demo-btn" class="btn btn--ghost">Load sample data</button>
                 <button type="button" id="clear-btn" class="btn btn--ghost" disabled>Clear files</button>
                 <span id="upload-progress" class="flex items-center gap-2 text-sm text-gray-500" hidden>
                     <span class="spinner"></span> <span id="upload-progress-text">Working&hellip;</span>
                 </span>
             </div>
+            <p id="engine-note" class="text-sm text-gray-500 mt-2"></p>
         </div>
     </section>
 
@@ -200,10 +205,10 @@
                 Upload this tenant's exports above. The schema is resolved first, then every customer is scored.
             </p>
         </div>
-    </div>
+    </div>{% endblock %}
 </main>
 
-<div class="drawer-scrim" id="drawer-scrim"></div>
+{% block drawer_markup %}<div class="drawer-scrim" id="drawer-scrim"></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="Retention playbook">
     <div class="drawer__head">
         <div>
@@ -217,7 +222,7 @@
         <button type="button" class="btn btn--success btn--block" id="deploy-btn">Deploy intervention</button>
         <p class="text-xs text-gray-500 mt-2 text-center" id="deploy-note"></p>
     </div>
-</aside>
+</aside>{% endblock %}
 
 <script src="/static/js/app.js"></script>
 {% block scripts %}{% endblock %}

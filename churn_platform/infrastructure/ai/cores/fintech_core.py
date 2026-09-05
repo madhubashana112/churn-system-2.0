@@ -4,6 +4,7 @@ from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.retention_playbook import RetentionPlaybook
+from churn_platform.infrastructure.ai.normalise_prediction import normalise_probability, normalise_tier
 from churn_platform.infrastructure.ai.prompts.fintech_prompts import FINTECH_CORE_SYSTEM_PROMPT
 import json
 
@@ -19,11 +20,13 @@ class FintechCore(IChurnCore):
         
         results = []
         for pred_data in response.get("predictions", []):
+            scored = pred_data["churn_prediction"]
+            probability = normalise_probability(scored["churn_probability"])
             churn_pred = ChurnPrediction(
                 entity_id=pred_data["entity_id"],
-                churn_probability=pred_data["churn_prediction"]["churn_probability"],
-                risk_tier=pred_data["churn_prediction"]["risk_tier"],
-                dormancy_type=pred_data["churn_prediction"].get("dormancy_type")
+                churn_probability=probability,
+                risk_tier=normalise_tier(scored.get("risk_tier"), probability),
+                dormancy_type=scored.get("dormancy_type")
             )
             playbook = RetentionPlaybook(**pred_data["retention_playbook"])
             results.append((churn_pred, playbook))

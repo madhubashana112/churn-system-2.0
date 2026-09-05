@@ -5,46 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Churn AI &mdash; Tenant onboarding</title>
     <link rel="stylesheet" href="/static/css/styles.css">
-    <style>body { --accent:#4f46e5; --accent-soft:#eef2ff; --accent-ink:#312e81; }</style>
+    <style>body { margin: 0; --accent:#4f46e5; --accent-soft:#eef2ff; --accent-ink:#312e81; }</style>
 </head>
 <body>
-<div class="onboard">
-    <div class="onboard__card">
-        <p class="page-head__eyebrow">Domain-adaptive churn prediction</p>
-        <h1 class="onboard__title">Register your tenant</h1>
-        <p class="onboard__subtitle">
-            The sector you pick decides which retention core scores your customers and
-            which dashboard you land on.
+<div class="landing">
+    <aside class="landing__brand">
+        <svg class="landing__spark" viewBox="0 0 320 120" fill="none" aria-hidden="true">
+            <polyline points="0,86 40,78 80,84 120,60 160,66 200,38 240,46 280,20 320,28"
+                      stroke="rgba(199,210,254,.55)" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,40 40,46 80,34 120,44 160,26 200,34 240,18 280,26 320,10"
+                      stroke="rgba(255,255,255,.28)" stroke-width="2" stroke-dasharray="4 6"
+                      stroke-linecap="round"/>
+        </svg>
+
+        <div class="landing__logo">
+            <span class="landing__logo-tile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+            </span>
+            <span class="landing__logo-name">Churn AI</span>
+        </div>
+
+        <h1 class="landing__headline">Know which customers are leaving &mdash; <em>before they do.</em></h1>
+
+        <p class="landing__lede">
+            Domain-adaptive churn prediction: the same pipeline, tuned to the signals
+            that actually precede cancellation in your sector.
         </p>
 
-        <div class="form-error" id="onboard-error" hidden></div>
+        <ol class="landing__steps">
+            <li><span class="landing__step-n">1</span> Drop in your raw exports &mdash; CSV, TSV or a multi-sheet workbook.</li>
+            <li><span class="landing__step-n">2</span> Schema and join keys are resolved automatically, per sector.</li>
+            <li><span class="landing__step-n">3</span> Every customer gets a risk tier, the signals behind it and a playbook.</li>
+        </ol>
 
-        <form id="onboard-form" novalidate>
-            <div class="field">
-                <label class="field__label" for="company-name">Company name</label>
-                <input class="input" type="text" id="company-name" name="name"
-                       placeholder="Northwind Subscription Co" autocomplete="organization" required>
-            </div>
-
-            <div class="field">
-                <label class="field__label" for="sector">Sector</label>
-                <select class="select" id="sector" name="sector" required>
-                    <option value="SaaS">SaaS &mdash; B2B / B2C subscriptions</option>
-                    <option value="Telecom">Telecom &amp; ISP &mdash; subscribers</option>
-                    <option value="FinTech">FinTech &amp; Banking &mdash; accounts and wallets</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn--primary btn--block" id="onboard-submit">
-                Register &amp; continue
-            </button>
-        </form>
-
-        <p class="onboard__subtitle" style="margin:1.2rem 0 0; text-align:center">
-            Aliases work too: <span class="mono">isp</span>, <span class="mono">banking</span>,
-            <span class="mono">subscription</span>.
+        <p class="landing__foot">
+            No API key needed to try it &mdash; the system model scores locally, in seconds.
         </p>
-    </div>
+    </aside>
+
+    <main class="landing__form">
+        <div class="landing__card">
+            <p class="page-head__eyebrow">Domain-adaptive churn prediction</p>
+            <h1 class="onboard__title">Register your tenant</h1>
+            <p class="onboard__subtitle">
+                The sector you pick decides which retention core scores your customers and
+                which dashboard you land on.
+            </p>
+
+            <div class="form-error" id="onboard-error" hidden></div>
+
+            <form id="onboard-form" novalidate>
+                <div class="field">
+                    <label class="field__label" for="company-name">Company name</label>
+                    <input class="input" type="text" id="company-name" name="name"
+                           placeholder="Northwind Subscription Co" autocomplete="organization" required>
+                </div>
+
+                <fieldset class="sector-pick">
+                    <legend class="field__label">Sector</legend>
+
+                    <label class="sector-card">
+                        <input type="radio" name="sector" value="SaaS" checked>
+                        <span class="sector-card__box">
+                            <span class="sector-card__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+                                    <path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+                                </svg>
+                            </span>
+                            <span class="sector-card__text">
+                                <span class="sector-card__name">SaaS</span>
+                                <span class="sector-card__desc">B2B / B2C subscriptions</span>
+                            </span>
+                            <span class="sector-card__tick" aria-hidden="true"></span>
+                        </span>
+                    </label>
+
+                    <label class="sector-card">
+                        <input type="radio" name="sector" value="Telecom">
+                        <span class="sector-card__box">
+                            <span class="sector-card__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                                    <line x1="12" y1="20" x2="12.01" y2="20"/>
+                                </svg>
+                            </span>
+                            <span class="sector-card__text">
+                                <span class="sector-card__name">Telecom &amp; ISP</span>
+                                <span class="sector-card__desc">subscribers</span>
+                            </span>
+                            <span class="sector-card__tick" aria-hidden="true"></span>
+                        </span>
+                    </label>
+
+                    <label class="sector-card">
+                        <input type="radio" name="sector" value="FinTech">
+                        <span class="sector-card__box">
+                            <span class="sector-card__icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="1" y="4" width="22" height="16" rx="2"/>
+                                    <line x1="1" y1="10" x2="23" y2="10"/>
+                                </svg>
+                            </span>
+                            <span class="sector-card__text">
+                                <span class="sector-card__name">FinTech &amp; Banking</span>
+                                <span class="sector-card__desc">accounts and wallets</span>
+                            </span>
+                            <span class="sector-card__tick" aria-hidden="true"></span>
+                        </span>
+                    </label>
+                </fieldset>
+
+                <button type="submit" class="btn btn--primary btn--block" id="onboard-submit">
+                    Register &amp; continue
+                </button>
+            </form>
+
+            <p class="landing__hint">
+                Aliases work too: <span class="mono">isp</span>, <span class="mono">banking</span>,
+                <span class="mono">subscription</span>.
+            </p>
+        </div>
+    </main>
 </div>
 
 <script src="/static/js/app.js"></script>

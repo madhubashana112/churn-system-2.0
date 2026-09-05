@@ -88,6 +88,37 @@ async def read_dashboard(request: Request, tenant_id: Optional[str] = None):
     )
 
 
+@app.get("/customer", response_class=HTMLResponse)
+async def read_customer(
+    request: Request,
+    tenant_id: Optional[str] = None,
+    entity_id: Optional[str] = None,
+):
+    """One customer's detail page.
+
+    Same contract as ``/dashboard``: the sector comes from the tenant record so
+    the page inherits the right colourway, and anything the server cannot place
+    goes to onboarding instead of rendering a page whose client-side fetch is
+    guaranteed to 404.
+    """
+    tenant = await get_tenant_repo().get(tenant_id) if tenant_id and entity_id else None
+    sector = normalize_sector(tenant.sector) if tenant else None
+    if sector is None:
+        return RedirectResponse(url="/", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="customer_detail.html",
+        context={
+            "tenant_id": tenant.tenant_id,
+            "tenant_name": tenant.name,
+            "sector_key": sector,
+            "sector_label": SECTOR_LABELS[sector],
+            "entity_id": entity_id,
+        },
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
 

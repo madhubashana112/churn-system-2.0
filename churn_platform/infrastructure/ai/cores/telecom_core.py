@@ -4,6 +4,7 @@ from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.retention_playbook import RetentionPlaybook
+from churn_platform.infrastructure.ai.normalise_prediction import normalise_probability, normalise_tier
 from churn_platform.infrastructure.ai.prompts.telecom_prompts import TELECOM_CORE_SYSTEM_PROMPT
 import json
 
@@ -19,12 +20,14 @@ class TelecomCore(IChurnCore):
         
         results = []
         for pred_data in response.get("predictions", []):
+            scored = pred_data["churn_prediction"]
+            probability = normalise_probability(scored["churn_probability"])
             churn_pred = ChurnPrediction(
                 entity_id=pred_data["entity_id"],
-                churn_probability=pred_data["churn_prediction"]["churn_probability"],
-                risk_tier=pred_data["churn_prediction"]["risk_tier"],
-                root_cause=pred_data["churn_prediction"].get("root_cause"),
-                regional_network_impact_flag=pred_data["churn_prediction"].get("regional_network_impact_flag")
+                churn_probability=probability,
+                risk_tier=normalise_tier(scored.get("risk_tier"), probability),
+                root_cause=scored.get("root_cause"),
+                regional_network_impact_flag=scored.get("regional_network_impact_flag")
             )
             playbook = RetentionPlaybook(**pred_data["retention_playbook"])
             results.append((churn_pred, playbook))

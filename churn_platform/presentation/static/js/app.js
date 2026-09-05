@@ -17,7 +17,9 @@
     const API = {
         tenants: '/api/v1/tenants/',
         analyze: '/api/v1/upload/analyze',
+        demoData: '/api/v1/upload/demo-data',
         metrics: '/api/v1/analytics/metrics',
+        customer: '/api/v1/analytics/customer',
         status: '/api/v1/analytics/status',
     };
 
@@ -80,6 +82,15 @@
         return Number.isFinite(value) ? value : 0;
     }
 
+    function currentTenantId() {
+        return document.body.getAttribute('data-tenant-id') || localStorage.getItem('tenant_id') || '';
+    }
+
+    function customerUrl(entityId) {
+        return `/customer?tenant_id=${encodeURIComponent(currentTenantId())}` +
+            `&entity_id=${encodeURIComponent(entityId)}`;
+    }
+
     async function requestJson(url, options) {
         const response = await fetch(url, options);
         let body = null;
@@ -122,7 +133,9 @@
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const name = byId('company-name').value.trim();
-            const sector = byId('sector').value;
+            // namedItem resolves a radio group to its checked value and a select
+            // to its own, so the picker's markup can change without this handler.
+            const sector = form.elements.namedItem('sector').value;
             if (!name) {
                 errorBox.textContent = 'A company name is required.';
                 show(errorBox, true);
@@ -310,7 +323,7 @@
         panel.hidden = false;
         byId('schema-key').textContent = mapping.primary_entity_key;
         byId('schema-table-count').textContent = String(mapping.tables.length);
-        byId('schema-source').textContent = offline ? 'Resolved offline (rule-based)' : 'Resolved by Qwen';
+        byId('schema-source').textContent = offline ? 'Resolved by the system model (rule-based)' : 'Resolved by the AI model';
 
         const body = clear(byId('schema-rows'));
         for (const table of mapping.tables) {
@@ -403,12 +416,14 @@
                 ...tableState.labels.map((label) =>
                     el('td', { text: values[label] === undefined ? '\u2014' : values[label] })),
                 el('td', {},
-                    el('button', {
-                        type: 'button',
-                        class: 'link-btn',
-                        text: 'View playbook',
-                        onclick: () => openDrawer(row),
-                    }))));
+                    el('div', { style: 'display:flex;gap:.75rem;align-items:center;white-space:nowrap' },
+                        el('button', {
+                            type: 'button',
+                            class: 'link-btn',
+                            text: 'View playbook',
+                            onclick: () => openDrawer(row),
+                        }),
+                        el('a', { class: 'link-btn', href: customerUrl(row.entity_id), text: 'Detail' })))));
         }
 
         if (!shown.length) {
@@ -485,12 +500,14 @@
                 el('td', {}, el('span', { class: `pill pill--${row.risk_tier}`, text: row.risk_tier })),
                 el('td', { class: 'prob-value', text: percent(row.churn_probability) }),
                 el('td', {},
-                    el('button', {
-                        type: 'button',
-                        class: 'link-btn',
-                        text: 'Open',
-                        onclick: () => openDrawer(row),
-                    }))));
+                    el('div', { style: 'display:flex;gap:.75rem;align-items:center;white-space:nowrap' },
+                        el('button', {
+                            type: 'button',
+                            class: 'link-btn',
+                            text: 'Open',
+                            onclick: () => openDrawer(row),
+                        }),
+                        el('a', { class: 'link-btn', href: customerUrl(row.entity_id), text: 'Detail' })))));
         }
     }
 
@@ -536,7 +553,13 @@
                 el('div', { class: 'evidence__row' },
                     el('span', { class: 'evidence__label', text: 'Channel' }),
                     el('span', { class: 'evidence__value', text: playbook.channel || '\u2014' }))),
-            el('div', { class: 'payload-box', text: playbook.action_payload || 'No payload was returned.' }));
+            el('div', { class: 'payload-box', text: playbook.action_payload || 'No payload was returned.' }),
+            el('div', { style: 'margin-top:1.1rem' },
+                el('a', {
+                    class: 'link-btn',
+                    href: customerUrl(row.entity_id),
+                    text: 'Open full customer detail \u2192',
+                })));
 
         byId('deploy-note').textContent = '';
         drawer.classList.add('is-open');
@@ -611,6 +634,25 @@
     // -- upload -------------------------------------------------------------
 
     let selectedFiles = [];
+    let isBusy = false;
+    let aiEngineAvailable = false;
+    let aiModelName = '';
+
+    /* One place decides what in the upload panel is clickable, because it
+       depends on three things now: files present, nothing in flight, and for the
+       AI button only, a provider key the server could actually resolve. */
+    function syncUploadButtons() {
+        const hasFiles = selectedFiles.length > 0;
+        const blocked = isBusy || !hasFiles;
+        const aiBtn = byId('analyze-ai-btn');
+        const systemBtn = byId('analyze-system-btn');
+        const clearBtn = byId('clear-btn');
+        const demoBtn = byId('demo-btn');
+        if (aiBtn) aiBtn.disabled = blocked || !aiEngineAvailable;
+        if (systemBtn) systemBtn.disabled = blocked;
+        if (clearBtn) clearBtn.disabled = blocked;
+        if (demoBtn) demoBtn.disabled = isBusy;
+    }
 
     function renderChips() {
         const row = byId('file-chips');
@@ -632,8 +674,7 @@
         }
         byId('upload-count').textContent =
             `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
-        byId('analyze-btn').disabled = selectedFiles.length === 0;
-        byId('clear-btn').disabled = selectedFiles.length === 0;
+        syncUploadButtons();
     }
 
     function addFiles(list) {
@@ -681,24 +722,29 @@
             renderChips();
         });
 
-        byId('analyze-btn').addEventListener('click', () => runAnalysis(tenantId));
+        byId('analyze-ai-btn').addEventListener('click', () => runAnalysis(tenantId, 'ai'));
+        byId('analyze-system-btn').addEventListener('click', () => runAnalysis(tenantId, 'system'));
+        byId('demo-btn').addEventListener('click', () => loadDemoData(tenantId));
         renderChips();
     }
 
     function setBusy(busy, message) {
+        isBusy = busy;
         show(byId('upload-progress'), busy);
         if (message) byId('upload-progress-text').textContent = message;
-        byId('analyze-btn').disabled = busy || selectedFiles.length === 0;
-        byId('clear-btn').disabled = busy || selectedFiles.length === 0;
+        syncUploadButtons();
     }
 
-    async function runAnalysis(tenantId) {
+    async function runAnalysis(tenantId, engine) {
         if (!selectedFiles.length) return;
-        setBusy(true, 'Resolving schema and synthesizing features\u2026');
+        setBusy(true, engine === 'ai'
+            ? 'Calling the AI model\u2026 a free tier answers slowly, so this can take minutes'
+            : 'Scoring locally and synthesizing features\u2026');
         renderBanners([]);
 
         const form = new FormData();
         form.append('tenant_id', tenantId);
+        form.append('engine', engine);
         for (const file of selectedFiles) form.append('files', file);
 
         try {
@@ -706,9 +752,11 @@
             setBusy(true, 'Aggregating sector metrics\u2026');
             const summary = await loadMetrics(tenantId);
             const messages = [];
-            if (result.offline_mode) {
-                messages.push(['info', 'Scores were computed locally by the offline gateway. No Qwen API call was made.']);
-            }
+            // offline_mode now describes this run rather than the deployment, so
+            // it is the one trustworthy statement about who scored it.
+            messages.push(['info', result.offline_mode
+                ? 'Scored by the system model: deterministic, computed locally from your exports, no AI provider called.'
+                : `Scored by the AI model${aiModelName ? ` (${aiModelName})` : ''}.`]);
             for (const warning of result.warnings || []) messages.push(['warning', warning]);
             if (summary && result.entities_analyzed < result.entities_uploaded) {
                 messages.push(['warning',
@@ -720,6 +768,60 @@
             setBusy(false);
             renderBanners([['warning', `Analysis failed: ${err.message}`]]);
         }
+    }
+
+    // -- sample data --------------------------------------------------------
+
+    function decodeDemoFile(entry) {
+        const binary = atob(entry.content_base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+            bytes[index] = binary.charCodeAt(index);
+        }
+        return new File([bytes], entry.name, { type: 'text/csv' });
+    }
+
+    /* Hands the bundled exports to the same addFiles() a file picker feeds, so
+       the chips, the counters and the analyze buttons all behave as they do
+       after a manual pick. Nothing is analyzed here: the user still chooses an
+       engine, which is the point of the two buttons. */
+    async function loadDemoData(tenantId) {
+        setBusy(true, 'Fetching the sample exports\u2026');
+        renderBanners([]);
+        try {
+            const payload = await requestJson(
+                `${API.demoData}?tenant_id=${encodeURIComponent(tenantId)}`);
+            addFiles(payload.files.map(decodeDemoFile));
+            renderBanners([['info',
+                `Loaded ${payload.files.length} sample ${payload.sector_label} exports. ` +
+                'Choose an engine and analyze.']]);
+        } catch (err) {
+            renderBanners([['warning', `Could not load the sample data: ${err.message}`]]);
+        }
+        setBusy(false);
+    }
+
+    function initEnginePicker(status) {
+        const note = byId('engine-note');
+        if (!note) return;
+
+        if (!status) {
+            aiEngineAvailable = false;
+            note.textContent = 'Could not read the scoring engines from the server.';
+            syncUploadButtons();
+            return;
+        }
+
+        aiEngineAvailable = Boolean(status.ai_available);
+        aiModelName = status.model || '';
+        note.textContent = aiEngineAvailable
+            ? `AI model: ${aiModelName}, ${status.batch_size} customers per call. ` +
+              'A full 100-customer base takes minutes on a free tier, and a hosted ' +
+              'function may time out before it finishes \u2014 the system model answers in seconds.'
+            : 'AI model unavailable: no provider key is configured. Add GROQ_API_KEY ' +
+              '(or HF_TOKEN, OPENROUTER_API_KEY, DASHSCOPE_API_KEY) to api_key.env to enable it. ' +
+              'The system model scores locally, deterministically, in seconds.';
+        syncUploadButtons();
     }
 
     // -- metrics ------------------------------------------------------------
@@ -766,8 +868,12 @@
         try {
             const status = await requestJson(API.status);
             if (badge) {
-                badge.textContent = status.offline_mode ? 'Offline scoring' : `Live ${status.model}`;
-                badge.className = `pill ${status.offline_mode ? 'pill--MEDIUM' : 'pill--LOW'}`;
+                // Availability, not mode: each run now picks its own engine, so
+                // the honest sidebar statement is what can be chosen at all.
+                badge.textContent = status.ai_available
+                    ? `AI available \u00B7 ${status.model}`
+                    : 'System model only';
+                badge.className = `pill ${status.ai_available ? 'pill--LOW' : 'pill--MEDIUM'}`;
             }
             if (note) note.textContent = status.batch_size_note;
             return status;
@@ -775,6 +881,141 @@
             if (badge) badge.textContent = 'Mode unknown';
             return null;
         }
+    }
+
+    // -- customer detail ------------------------------------------------------
+
+    /* The detail page shares the dashboard's helpers but none of its data flow:
+       one customer, one fetch, every number positioned against the whole base. */
+
+    function formatMeasure(value) {
+        if (Number.isInteger(value)) return value.toLocaleString();
+        const abs = Math.abs(value);
+        const digits = abs >= 100 ? 1 : abs >= 1 ? 2 : 4;
+        return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+
+    function toneForTier(tier) {
+        if (tier === 'CRITICAL') return 'critical';
+        if (tier === 'HIGH') return 'warning';
+        if (tier === 'LOW') return 'good';
+        return 'neutral';
+    }
+
+    function detailCard(label, value, detail, tone) {
+        return el('article', { class: 'kpi-card', 'data-tone': tone || 'neutral' },
+            el('p', { class: 'kpi-card__label', text: label }),
+            el('p', { class: 'kpi-card__value', text: value }),
+            detail ? el('p', { class: 'kpi-card__detail', text: detail }) : null);
+    }
+
+    function percentileCell(feature) {
+        if (feature.percentile === null || feature.percentile === undefined) {
+            return el('td', { text: '\u2014' });
+        }
+        return el('td', {},
+            el('div', { class: 'prob-cell' },
+                el('div', { class: 'prob-bar' },
+                    el('div', {
+                        class: 'prob-bar__fill',
+                        style: `width:${Math.round(feature.percentile * 100)}%;` +
+                            `background:${cssVar('--accent', '#4f46e5')}`,
+                    })),
+                el('span', { class: 'prob-value', text: percent(feature.percentile, 0) })));
+    }
+
+    function renderDetail(detail) {
+        const tone = toneForTier(detail.risk_tier);
+        const score = clear(byId('detail-score'));
+        score.append(
+            detailCard('Churn probability', percent(detail.churn_probability),
+                `Ranked ${detail.risk_rank} of ${detail.population_size} in this customer base`, tone),
+            detailCard('Risk tier', detail.risk_tier,
+                detail.reason || 'No explanation was recorded for this score', tone),
+            detailCard('Peers compared', String(detail.population_size),
+                'Customers scored in the latest analysis', 'neutral'),
+            detailCard('Analyzed',
+                detail.created_at ? new Date(detail.created_at).toLocaleString() : '\u2014',
+                'From the latest upload for this tenant', 'neutral'));
+
+        const head = clear(byId('detail-evidence-head'));
+        head.append(el('tr', {},
+            el('th', { text: 'Signal' }),
+            el('th', { text: 'This customer' }),
+            el('th', { text: 'Tenant median' }),
+            el('th', { text: 'Percentile in base' })));
+
+        const evidence = clear(byId('detail-evidence'));
+        for (const feature of detail.features) {
+            evidence.append(el('tr', {},
+                el('td', { text: feature.key.replace(/_/g, ' ') }),
+                el('td', { class: 'mono', text: formatMeasure(feature.value) }),
+                el('td', {
+                    class: 'mono',
+                    text: feature.tenant_median === null || feature.tenant_median === undefined
+                        ? '\u2014' : formatMeasure(feature.tenant_median),
+                }),
+                percentileCell(feature)));
+        }
+        if (!detail.features.length) {
+            evidence.append(el('tr', {},
+                el('td', { colspan: '4' },
+                    el('div', { class: 'empty-state' },
+                        el('p', { class: 'empty-state__hint',
+                            text: 'No numeric signals were stored for this customer.' })))));
+        }
+        const count = byId('evidence-count');
+        if (count) {
+            count.textContent = `${detail.features.length} signal${detail.features.length === 1 ? '' : 's'}`;
+        }
+
+        const playbook = clear(byId('detail-playbook'));
+        if (detail.reason) {
+            playbook.append(el('p', { class: 'section__title', text: 'Why this score' }),
+                el('p', { class: 'payload-box', style: 'margin-bottom:1.1rem', text: detail.reason }));
+        }
+        const action = detail.playbook || {};
+        playbook.append(el('p', { class: 'section__title', text: 'Recommended intervention' }),
+            el('div', { class: 'evidence', style: 'margin-bottom:.8rem' },
+                el('div', { class: 'evidence__row' },
+                    el('span', { class: 'evidence__label', text: 'Action' }),
+                    el('span', { class: 'evidence__value', text: action.action_type || '\u2014' })),
+                el('div', { class: 'evidence__row' },
+                    el('span', { class: 'evidence__label', text: 'Channel' }),
+                    el('span', { class: 'evidence__value', text: action.channel || '\u2014' }))),
+            el('div', { class: 'payload-box', text: action.action_payload || 'No payload was returned.' }));
+    }
+
+    function initCustomerDetail() {
+        const body = document.body;
+        const tenantId = body.getAttribute('data-tenant-id');
+        const entityId = body.getAttribute('data-entity-id');
+
+        (async () => {
+            await loadStatus();
+            const messages = [];
+            try {
+                const detail = await requestJson(
+                    `${API.customer}?tenant_id=${encodeURIComponent(tenantId)}` +
+                    `&entity_id=${encodeURIComponent(entityId)}`);
+                renderDetail(detail);
+                // The run remembers its own engine, so this says who scored
+                // *this* customer rather than what the deployment defaults to.
+                messages.push(['info', detail.offline_mode
+                    ? 'This score comes from the system model: deterministic, computed from the ' +
+                      'uploaded features, and not model output.'
+                    : 'This score comes from the AI model.']);
+            } catch (err) {
+                show(byId('detail-score-section'), false);
+                show(byId('detail-evidence-panel'), false);
+                show(byId('detail-playbook-panel'), false);
+                show(byId('detail-empty'), true);
+                // The 404 text already says which of the two causes it is.
+                const hint = byId('detail-empty-hint');
+                if (hint) hint.textContent = err.message;
+            }
+            renderBanners(messages);
+        })();
     }
 
     // -- boot ---------------------------------------------------------------
@@ -800,12 +1041,16 @@
 
         (async () => {
             const status = await loadStatus();
+            initEnginePicker(status);
             const summary = await loadMetrics(tenantId);
             const messages = [];
-            if (status && status.offline_mode) {
+            // The stored run remembers which engine produced it, so this describes
+            // the numbers actually on screen rather than what a new run would
+            // default to.
+            if (summary && summary.offline_mode) {
                 messages.push(['info',
-                    'No DASHSCOPE_API_KEY is configured, so predictions come from the offline gateway: ' +
-                    'deterministic, computed from your uploaded features, and not Qwen output.']);
+                    'These predictions came from the system model: deterministic, computed from ' +
+                    'the uploaded features, and not model output. Re-analyze with the AI model to compare.']);
             }
             if (summary) {
                 for (const warning of summary.warnings || []) messages.push(['warning', warning]);
@@ -821,6 +1066,10 @@
             Chart.defaults.color = '#4b5160';
         }
         if (initOnboarding()) return;
+        if (document.body.hasAttribute('data-entity-id')) {
+            initCustomerDetail();
+            return;
+        }
         if (byId('dropzone')) initDashboard();
     });
 })();

@@ -36,6 +36,13 @@ from churn_platform.domain.models.schema_mapping import (
     ROLE_TIME_SERIES,
     ROLE_TRANSACTIONAL,
 )
+# The bands live in normalise_prediction; these two come along for re-export so
+# there is one definition to read.
+from churn_platform.infrastructure.ai.normalise_prediction import (
+    CRITICAL_TIER,
+    RISK_THRESHOLDS,
+    risk_tier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +58,6 @@ FINTECH_MARKER = "FinTech & Banking Retention AI Core"
 # churn base rate rather than at a coin flip.
 SIGMOID_STEEPNESS = 3.0
 MIDPOINT_SCORE = 0.25
-
-RISK_THRESHOLDS = ((0.30, "LOW"), (0.55, "MEDIUM"), (0.80, "HIGH"))
-CRITICAL_TIER = "CRITICAL"
 
 # Continuous signals are winsorised before normalising: one customer with a
 # tenfold usage spike would otherwise flatten the whole batch into the bottom
@@ -269,13 +273,6 @@ def extract_payload(user_prompt: str) -> Any:
         except json.JSONDecodeError:
             continue
     raise ValueError("No JSON payload found in the user prompt")
-
-
-def risk_tier(probability: float) -> str:
-    for threshold, tier in RISK_THRESHOLDS:
-        if probability < threshold:
-            return tier
-    return CRITICAL_TIER
 
 
 def _sigmoid(x: float) -> float:

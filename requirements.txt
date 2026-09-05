@@ -10,3 +10,4 @@ python-multipart
 aiofiles
 pytest
 python-dotenv
+upstash-redis

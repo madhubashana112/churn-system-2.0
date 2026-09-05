@@ -661,3 +661,228 @@ body {
     .sidebar__section, .sidebar__foot { display: none; }
     .main { padding: 1.2rem 1.1rem 2.5rem; }
 }
+
+/* -- onboarding landing ----------------------------------------------------
+ *
+ * Used only by index.html. Deliberately a separate vocabulary from .onboard,
+ * which dashboard.html reuses for its boot screen: restyling that class would
+ * repaint a page that has nothing to do with registration.
+ */
+
+.landing {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
+}
+
+.landing__brand {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    color: #f3f4f8;
+    padding: 3rem 3rem 2.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background:
+        radial-gradient(560px 320px at 88% -6%, rgba(99, 102, 241, .38) 0%, transparent 62%),
+        radial-gradient(420px 300px at -12% 108%, rgba(79, 70, 229, .30) 0%, transparent 60%),
+        linear-gradient(164deg, var(--accent-ink) 0%, #14162b 74%);
+}
+
+.landing__spark {
+    position: absolute;
+    right: -3rem;
+    bottom: 5rem;
+    width: 24rem;
+    opacity: .55;
+    pointer-events: none;
+}
+
+.landing__logo { display: flex; align-items: center; gap: .65rem; }
+
+.landing__logo-tile {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, .14);
+    border: 1px solid rgba(255, 255, 255, .22);
+}
+
+.landing__logo-tile svg { width: 1.1rem; height: 1.1rem; }
+
+.landing__logo-name { font-weight: 700; letter-spacing: -.01em; }
+
+.landing__headline {
+    font-size: clamp(1.7rem, 2.6vw, 2.35rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    max-width: 22ch;
+}
+
+.landing__headline em { font-style: normal; color: #c7d2fe; }
+
+.landing__lede { color: #c3c7d4; font-size: .9rem; line-height: 1.55; max-width: 36ch; }
+
+.landing__steps { list-style: none; display: grid; gap: .8rem; margin: .2rem 0 0; }
+
+.landing__steps li {
+    display: flex;
+    gap: .7rem;
+    align-items: flex-start;
+    font-size: .85rem;
+    line-height: 1.45;
+    color: #dcdfe8;
+}
+
+.landing__step-n {
+    flex: none;
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #e0e7ff;
+    background: rgba(255, 255, 255, .10);
+    border: 1px solid rgba(255, 255, 255, .20);
+}
+
+.landing__foot {
+    margin-top: auto;
+    font-size: .76rem;
+    color: #a6abbd;
+    border-top: 1px solid rgba(255, 255, 255, .14);
+    padding-top: 1rem;
+}
+
+.landing__form {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    padding: 2.5rem 1.5rem;
+    background:
+        radial-gradient(760px 380px at 108% -10%, var(--accent-soft) 0%, transparent 60%),
+        var(--bg);
+}
+
+/* This sheet has no global border-box reset: without it, the card's
+   width:min(27rem,100%) measures the content box and its padding overflows the
+   viewport on narrow screens, and a width:100% input renders outside the card.
+   Scoped here — base.html's filters already live with content-box and must not shift. */
+.landing__card {
+    width: min(27rem, 100%);
+    min-width: 0;
+    box-sizing: border-box;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lift);
+    padding: 2rem;
+}
+
+.landing__card .input { box-sizing: border-box; }
+
+.landing__hint { font-size: .76rem; color: var(--muted); margin: 1.1rem 0 0; text-align: center; }
+
+/* Sector picker: a radio group dressed as cards. The input stays in the DOM and
+   keeps the keyboard behaviour of a radio group; only its box is hidden, so
+   :checked and :focus-visible below do the whole selection UI. */
+
+.sector-pick { border: 0; padding: 0; margin: 0 0 1.15rem; }
+
+.sector-pick legend { padding: 0; }
+
+.sector-card { display: block; position: relative; cursor: pointer; }
+
+.sector-card + .sector-card { margin-top: .55rem; }
+
+.sector-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+.sector-card__box {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.sector-card:hover .sector-card__box { border-color: var(--border-strong); }
+
+.sector-card__icon {
+    flex: none;
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.sector-card__icon svg { width: 1.15rem; height: 1.15rem; }
+
+.sector-card__text { display: grid; gap: .1rem; min-width: 0; }
+
+.sector-card__name { font-size: .86rem; font-weight: 700; }
+
+.sector-card__desc { font-size: .74rem; color: var(--muted); }
+
+.sector-card__tick {
+    position: relative;
+    margin-left: auto;
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--border-strong);
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.sector-card__tick::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: .3rem;
+    height: .55rem;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: translate(-50%, -50%) rotate(45deg);
+    opacity: 0;
+}
+
+.sector-card input:checked + .sector-card__box {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.sector-card input:checked + .sector-card__box .sector-card__tick {
+    border-color: var(--accent);
+    background: var(--accent);
+}
+
+.sector-card input:checked + .sector-card__box .sector-card__tick::after { opacity: 1; }
+
+.sector-card input:focus-visible + .sector-card__box {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 56rem) {
+    .landing { grid-template-columns: 1fr; }
+
+    .landing__brand { padding: 2.2rem 1.6rem 1.7rem; gap: 1.05rem; }
+    .landing__steps, .landing__spark { display: none; }
+    .landing__headline { max-width: none; }
+    .landing__foot { margin-top: .4rem; }
+    .landing__form { padding: 2rem 1.1rem 3rem; }
+}

@@ -130,7 +130,7 @@ def _tone_for_share(share: float) -> str:
     return TONE_GOOD
 
 
-def _reason(outcome: EntityOutcome) -> Optional[str]:
+def reason_for(outcome: EntityOutcome) -> Optional[str]:
     prediction = outcome.prediction
     if prediction.root_cause:
         return prediction.root_cause
@@ -782,7 +782,7 @@ class SummarizeAnalysisUseCase:
                     entity_id=o.prediction.entity_id,
                     churn_probability=o.prediction.churn_probability,
                     risk_tier=o.prediction.risk_tier,
-                    reason=_reason(o),
+                    reason=reason_for(o),
                     highlights=_highlights(columns, o),
                     playbook=o.playbook,
                 )

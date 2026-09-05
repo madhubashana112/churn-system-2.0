@@ -17,6 +17,21 @@ import pytest
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.schema_mapping import SchemaMapping, TableClassification
 
+# This runs before pytest imports a single test module, which is the only point
+# early enough: `dependencies.py` builds its gateway singleton at import time, so
+# a real key left in `api_key.env` would already be baked into a live client by
+# the time a fixture ran. The suite would then be slow, metered against the
+# developer's free quota, and at the mercy of whatever a hosted model replied.
+from churn_platform.config import PROVIDERS, Settings, get_settings
+
+Settings.model_config["env_file"] = ()
+for _provider in PROVIDERS.values():
+    for _key_field in _provider.key_fields:
+        os.environ.pop(_key_field.upper(), None)
+for _knob in ("QWEN_MODE", "QWEN_BASE_URL", "QWEN_MODEL", "BATCH_SIZE", "MAX_ENTITIES"):
+    os.environ.pop(_knob, None)
+get_settings.cache_clear()
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(REPO_ROOT, "data")
 
