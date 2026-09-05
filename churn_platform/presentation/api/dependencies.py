@@ -2,8 +2,9 @@
 
 One place decides which implementation of each interface gets wired up, so the
 rest of the app only ever asks for an abstraction. Module-level singletons are
-deliberate: the repository is in-memory and the parsers are stateless, so there
-is no per-request state worth isolating.
+deliberate: the parsers are stateless and the repositories are in-memory, keyed
+by tenant, so sharing them is what lets the dashboard reload into the last
+analysis instead of an empty page.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import logging
 from typing import Dict, Optional
 
 from churn_platform.application.use_cases.execute_sector_analysis import ExecuteSectorAnalysisUseCase
+from churn_platform.application.use_cases.summarize_analysis import SummarizeAnalysisUseCase
 from churn_platform.config import Settings, get_settings
 from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
 from churn_platform.domain.interfaces.i_churn_core import IChurnCore
@@ -29,6 +31,7 @@ from churn_platform.infrastructure.ai.qwen_gateway import QwenGateway
 from churn_platform.infrastructure.parsers.feature_synthesizer import PandasFeatureSynthesizer
 from churn_platform.infrastructure.parsers.schema_resolver import AISchemaResolver
 from churn_platform.infrastructure.parsers.sector_feature_enrichers import enrich_features
+from churn_platform.infrastructure.repositories.memory_analysis_repo import MemoryAnalysisRepository
 from churn_platform.infrastructure.repositories.memory_tenant_repo import MemoryTenantRepository
 
 logger = logging.getLogger(__name__)
@@ -70,6 +73,7 @@ def build_ai_gateway(settings: Optional[Settings] = None) -> IAIGateway:
 
 
 _tenant_repo = MemoryTenantRepository()
+_analysis_repo = MemoryAnalysisRepository()
 _ai_gateway = build_ai_gateway()
 _schema_resolver = AISchemaResolver(_ai_gateway)
 _feature_synthesizer = PandasFeatureSynthesizer()
@@ -83,6 +87,10 @@ _SECTOR_CORES: Dict[str, IChurnCore] = {
 
 def get_tenant_repo() -> MemoryTenantRepository:
     return _tenant_repo
+
+
+def get_analysis_repo() -> MemoryAnalysisRepository:
+    return _analysis_repo
 
 
 def get_ai_gateway() -> IAIGateway:
@@ -114,6 +122,10 @@ def get_analysis_batch_size() -> int:
 
 def get_analysis_use_case() -> ExecuteSectorAnalysisUseCase:
     return ExecuteSectorAnalysisUseCase(batch_size=get_analysis_batch_size())
+
+
+def get_summarize_use_case() -> SummarizeAnalysisUseCase:
+    return SummarizeAnalysisUseCase(analysis_repo=_analysis_repo, tenant_repo=_tenant_repo)
 
 
 def get_sector_core(sector: str) -> IChurnCore:

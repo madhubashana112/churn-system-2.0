@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "_macros.html" as components %}
+
+{% block title %}Churn AI &mdash; SaaS retention{% endblock %}
+
+{#- Indigo: the product-analytics colourway, distinct from the two operational
+    sectors so a tenant routed to the wrong dashboard is obvious at a glance. -#}
+{% block theme_vars %}--accent:#4f46e5;--accent-soft:#eef2ff;--accent-ink:#312e81;{% endblock %}
+{% block brand_mark %}S{% endblock %}
+{% block brand_name %}SaaS Retention{% endblock %}
+
+{% block page_eyebrow %}SaaS &middot; B2B and B2C subscriptions{% endblock %}
+{% block page_title %}Subscription churn dashboard{% endblock %}
+{% block page_subtitle %}
+    Usage collapse, payment rejection and data-export spikes are the three signals that
+    precede a cancellation. Billing value at risk is summed from actual invoice totals.
+{% endblock %}
+
+{% block upload_hint %}
+    Expected: a subscriber or user table, an event/session log, invoices and support tickets.
+    CSV, TSV or a multi-sheet .xlsx workbook.
+{% endblock %}
+{% block dropzone_hint %}or click to browse &mdash; users.csv, events_log.csv, invoices.csv, tickets.csv{% endblock %}
+
+{% block sidebar_sector_links %}
+    <button type="button" class="sidebar__link" data-scroll-to="chart-segment_risk"><span>&#9638;</span> Tier risk</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-usage_dropoff"><span>&#8600;</span> Feature drop-off</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-velocity_spread"><span>&#8776;</span> Login velocity</button>
+    <button type="button" class="sidebar__link" data-scroll-to="focus-queue"><span>&#9873;</span> Payment recovery</button>
+{% endblock %}
+
+{% block kpi_section_title %}Retention overview{% endblock %}
+{% block kpi_keys %}mrr_at_risk,at_risk,payment_failures,velocity_collapse,data_export,negative_tickets{% endblock %}
+
+{% block charts_section_title %}Churn signals{% endblock %}
+{% block sector_charts %}
+    {{ components.chart_panel("segment_risk", "Risk by subscription tier",
+       "Which plan levels are leaving") }}
+    {{ components.chart_panel("usage_dropoff", "Feature adoption drop-off",
+       "Weekly-equivalent login rate, before and now") }}
+    {{ components.chart_panel("velocity_spread", "Login velocity spread",
+       "Recent activity over the prior 30-day weekly rate; 1x means unchanged") }}
+{% endblock %}
+
+{% block sector_panel %}
+    {{ components.focus_queue(
+        "Payment recovery queue",
+        "Accounts with a rejected or unpaid invoice — the cheapest save in the book, because the customer already told you why.",
+        "Failed invoices", "Tier",
+        "No account has a failed invoice. Churn risk here is behavioural, not financial.",
+        match="nonzero") }}
+{% endblock %}
+
+{% block table_title %}Accounts by churn risk{% endblock %}
+{% block table_subtitle %}
+    Billing value, failed invoices, login velocity and export share are measured from the upload, not estimated.
+{% endblock %}

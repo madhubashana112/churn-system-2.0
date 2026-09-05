@@ -16,8 +16,10 @@ from churn_platform.application.use_cases.resolve_multi_sheet_schema import (
 )
 from churn_platform.application.use_cases.synthesize_features import SynthesizeFeaturesUseCase
 from churn_platform.config import get_settings
+from churn_platform.domain.models.analysis_run import AnalysisRun, EntityOutcome
 from churn_platform.infrastructure.parsers.file_ingestion import UnsupportedFileError, ingest
 from churn_platform.presentation.api.dependencies import (
+    get_analysis_repo,
     get_analysis_use_case,
     get_feature_enricher,
     get_feature_synthesizer,
@@ -65,21 +67,39 @@ async def upload_and_analyze(
     ).execute(schema, ingested.dataframes, sector=tenant.sector)
 
     warnings: List[str] = []
+    entities_uploaded = len(features)
     cap = get_settings().max_entities
-    if cap > 0 and len(features) > cap:
+    if cap > 0 and entities_uploaded > cap:
         warnings.append(
             f"MAX_ENTITIES={cap} is set, so only the first {cap} of "
-            f"{len(features)} entities were analyzed"
+            f"{entities_uploaded} entities were analyzed"
         )
         features = features[:cap]
 
-    entities_uploaded = len(features)
     results = await get_analysis_use_case().execute(core, features)
-    if len(results) < entities_uploaded:
+    if len(results) < len(features):
         warnings.append(
-            f"{entities_uploaded - len(results)} entities could not be scored; "
-            "see the server log for the failed batch"
+            f"{len(features) - len(results)} of the {len(features)} submitted entities "
+            "could not be scored; see the server log for the failed batch"
         )
+
+    # The features travel with the run: the sector KPIs are recomputed from them
+    # on every dashboard load, so a stored prediction without its evidence could
+    # only ever be restated, not re-aggregated.
+    features_by_id = {entry.entity_id: entry.features for entry in features}
+    await get_analysis_repo().save(AnalysisRun(
+        tenant_id=tenant.tenant_id,
+        sector=tenant.sector,
+        schema_mapping=schema,
+        outcomes=[
+            EntityOutcome(prediction=pred, playbook=playbook, features=features_by_id.get(pred.entity_id, {}))
+            for pred, playbook in results
+        ],
+        entities_uploaded=entities_uploaded,
+        entities_analyzed=len(results),
+        offline_mode=is_offline_gateway(),
+        warnings=warnings,
+    ))
 
     return AnalysisResponse(
         schema_mapping=schema,

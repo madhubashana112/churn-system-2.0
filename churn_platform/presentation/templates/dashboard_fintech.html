@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "_macros.html" as components %}
+
+{% block title %}Churn AI &mdash; FinTech retention{% endblock %}
+
+{#- Emerald: money and liquidity. Kept away from the green the LOW risk pill
+    uses by weight rather than hue — the pill is a small chip, the theme is a
+    3px rule and a heading. -#}
+{% block theme_vars %}--accent:#059669;--accent-soft:#d1fae5;--accent-ink:#064e3b;{% endblock %}
+{% block brand_mark %}F{% endblock %}
+{% block brand_name %}FinTech Retention{% endblock %}
+
+{% block page_eyebrow %}FinTech &amp; Banking &middot; accounts and wallets{% endblock %}
+{% block page_title %}Liquidity and dormancy dashboard{% endblock %}
+{% block page_subtitle %}
+    A customer who closes an account drains it first. Outflow share, P2P failure streaks
+    and dormancy are measured from the ledger, so the drain ratio is real money moving
+    rather than a proxy for it.
+{% endblock %}
+
+{% block upload_hint %}
+    Expected: an account table, a ledger of transactions, card swipes and disputes.
+    CSV, TSV or a multi-sheet .xlsx workbook.
+{% endblock %}
+{% block dropzone_hint %}or click to browse &mdash; accounts.csv, ledger_transactions.csv, card_swipes.csv, disputes.csv{% endblock %}
+
+{% block sidebar_sector_links %}
+    <button type="button" class="sidebar__link" data-scroll-to="chart-drain_vs_risk"><span>&#8600;</span> Drain vs risk</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-dormancy_mix"><span>&#9681;</span> Dormancy profile</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-withdrawal_share"><span>&#8693;</span> Withdrawal share</button>
+    <button type="button" class="sidebar__link" data-scroll-to="focus-queue"><span>&#9202;</span> Reactivation</button>
+{% endblock %}
+
+{% block kpi_section_title %}Liquidity overview{% endblock %}
+{% block kpi_keys %}liquidity_drain,net_outflow,rapid_drain,at_risk,dormant_accounts,p2p_failures,fraud_disputes{% endblock %}
+
+{% block charts_section_title %}Money movement{% endblock %}
+{% block charts_grid_class %}grid grid--charts-wide{% endblock %}
+{% block sector_charts %}
+    {{ components.chart_panel("drain_vs_risk", "Balance drain against predicted churn",
+       "Each point is one account — the rising band is where the drain signal earns its weight",
+       size="tall", span=True) }}
+    {{ components.chart_panel("dormancy_mix", "Dormancy profile",
+       "Hard dormancy needs reactivation; soft dormancy needs a nudge") }}
+    {{ components.chart_panel("withdrawal_share", "Recent withdrawal share of settled flow",
+       "Last 14 days — a book of withdrawals with no deposits is a closing account") }}
+{% endblock %}
+
+{% block sector_panel %}
+    {{ components.focus_queue(
+        "Reactivation queue",
+        "Hard-dormant accounts: no recent settled flow at all. These need a reactivation offer, because a fee waiver on an empty account saves nobody.",
+        "Dormancy", "Tier",
+        "No account is hard-dormant. Risk here is coming from active accounts draining out.",
+        value="HARD_DORMANCY", match="equals") }}
+{% endblock %}
+
+{% block table_title %}Accounts by churn risk{% endblock %}
+{% block table_subtitle %}
+    Drain ratio, withdrawal share, 14-day outflow and P2P failure streaks are computed from the ledger.
+{% endblock %}
