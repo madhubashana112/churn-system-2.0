@@ -1,51 +1,66 @@
 ticket_id,user_id,subject,sentiment,status
-tkt_1,usr_32,Cannot login,Negative,CLOSED
-tkt_2,usr_86,Export not working,Neutral,CLOSED
-tkt_3,usr_70,Slow performance,Negative,CLOSED
-tkt_4,usr_35,Cannot login,Negative,OPEN
-tkt_5,usr_22,Export not working,Neutral,CLOSED
-tkt_6,usr_65,Export not working,Neutral,CLOSED
-tkt_7,usr_84,Competitor is cheaper,Neutral,CLOSED
-tkt_8,usr_22,Competitor is cheaper,Very Negative,CLOSED
-tkt_9,usr_11,Cannot login,Negative,OPEN
-tkt_10,usr_77,Competitor is cheaper,Negative,OPEN
-tkt_11,usr_3,Export not working,Neutral,OPEN
-tkt_12,usr_9,Competitor is cheaper,Neutral,OPEN
-tkt_13,usr_60,Cancel subscription,Neutral,CLOSED
-tkt_14,usr_76,Competitor is cheaper,Neutral,OPEN
-tkt_15,usr_87,Export not working,Very Negative,OPEN
-tkt_16,usr_14,Cannot login,Negative,OPEN
-tkt_17,usr_97,Slow performance,Neutral,OPEN
-tkt_18,usr_18,Competitor is cheaper,Very Negative,CLOSED
-tkt_19,usr_73,Export not working,Neutral,OPEN
-tkt_20,usr_23,Slow performance,Very Negative,CLOSED
-tkt_21,usr_74,Slow performance,Neutral,OPEN
-tkt_22,usr_83,Cancel subscription,Neutral,CLOSED
-tkt_23,usr_47,Slow performance,Neutral,CLOSED
-tkt_24,usr_69,Export not working,Neutral,OPEN
-tkt_25,usr_47,Export not working,Neutral,OPEN
-tkt_26,usr_87,Competitor is cheaper,Negative,OPEN
-tkt_27,usr_30,Competitor is cheaper,Very Negative,OPEN
-tkt_28,usr_25,Competitor is cheaper,Negative,CLOSED
-tkt_29,usr_28,Slow performance,Neutral,CLOSED
-tkt_30,usr_98,Slow performance,Negative,OPEN
-tkt_31,usr_25,Cancel subscription,Neutral,OPEN
-tkt_32,usr_74,Competitor is cheaper,Neutral,CLOSED
-tkt_33,usr_78,Cannot login,Negative,OPEN
-tkt_34,usr_58,Cancel subscription,Negative,CLOSED
-tkt_35,usr_94,Cannot login,Neutral,OPEN
-tkt_36,usr_41,Slow performance,Neutral,CLOSED
-tkt_37,usr_25,Cancel subscription,Very Negative,CLOSED
-tkt_38,usr_78,Cancel subscription,Neutral,CLOSED
-tkt_39,usr_99,Export not working,Neutral,CLOSED
-tkt_40,usr_48,Slow performance,Negative,CLOSED
-tkt_41,usr_98,Slow performance,Neutral,OPEN
-tkt_42,usr_10,Cancel subscription,Neutral,CLOSED
-tkt_43,usr_99,Slow performance,Neutral,OPEN
-tkt_44,usr_75,Cancel subscription,Negative,CLOSED
-tkt_45,usr_11,Export not working,Negative,CLOSED
-tkt_46,usr_85,Cancel subscription,Negative,OPEN
-tkt_47,usr_21,Slow performance,Very Negative,OPEN
-tkt_48,usr_86,Slow performance,Negative,OPEN
-tkt_49,usr_45,Cancel subscription,Neutral,OPEN
-tkt_50,usr_7,Cancel subscription,Neutral,CLOSED
+tkt_1,usr_1,Want to unsubscribe before the renewal charge hits,Very Negative,OPEN
+tkt_2,usr_1,Performance is unusable and support never resolved my case,Negative,OPEN
+tkt_3,usr_1,"Dashboard is far too slow to be usable, requesting a refund",Negative,OPEN
+tkt_4,usr_2,"Dashboard is far too slow to be usable, requesting a refund",Negative,OPEN
+tkt_5,usr_3,Cancel subscription and refund the last invoice please,Very Negative,OPEN
+tkt_6,usr_3,Cancel subscription and refund the last invoice please,Neutral,OPEN
+tkt_7,usr_4,Export took three hours and timed out twice,Very Negative,CLOSED
+tkt_8,usr_5,"Dashboard is far too slow to be usable, requesting a refund",Very Negative,OPEN
+tkt_9,usr_6,Seat downgrade request because most of the team is leaving,Negative,OPEN
+tkt_10,usr_6,"Login has been broken for a week, escalating to our CTO",Very Negative,OPEN
+tkt_11,usr_7,Chargeback filed with our bank for the duplicate invoice,Negative,OPEN
+tkt_12,usr_7,We are switching to a cheaper provider next month,Very Negative,OPEN
+tkt_13,usr_8,Billing error still unresolved after three separate tickets,Negative,OPEN
+tkt_14,usr_9,Want to unsubscribe before the renewal charge hits,Very Negative,OPEN
+tkt_15,usr_9,"Dashboard is far too slow to be usable, requesting a refund",Very Negative,CLOSED
+tkt_16,usr_9,We are switching to a cheaper provider next month,Very Negative,OPEN
+tkt_17,usr_10,Cancel subscription and refund the last invoice please,Very Negative,OPEN
+tkt_18,usr_10,Chargeback filed with our bank for the duplicate invoice,Very Negative,OPEN
+tkt_19,usr_11,Performance is unusable and support never resolved my case,Negative,OPEN
+tkt_20,usr_11,Performance is unusable and support never resolved my case,Negative,CLOSED
+tkt_21,usr_12,Chargeback filed with our bank for the duplicate invoice,Very Negative,CLOSED
+tkt_22,usr_13,Performance is unusable and support never resolved my case,Very Negative,CLOSED
+tkt_23,usr_13,"Dashboard is far too slow to be usable, requesting a refund",Very Negative,OPEN
+tkt_24,usr_14,Chargeback filed with our bank for the duplicate invoice,Negative,OPEN
+tkt_25,usr_14,"Login has been broken for a week, escalating to our CTO",Very Negative,OPEN
+tkt_26,usr_15,Chargeback filed with our bank for the duplicate invoice,Negative,OPEN
+tkt_27,usr_15,Want to unsubscribe before the renewal charge hits,Very Negative,OPEN
+tkt_28,usr_15,Your competitor offers the same features at half the price,Negative,OPEN
+tkt_29,usr_16,We are switching to a cheaper provider next month,Very Negative,CLOSED
+tkt_30,usr_16,"Dashboard is far too slow to be usable, requesting a refund",Very Negative,OPEN
+tkt_31,usr_16,"Login has been broken for a week, escalating to our CTO",Very Negative,OPEN
+tkt_32,usr_17,We are switching to a cheaper provider next month,Negative,OPEN
+tkt_33,usr_18,Seat downgrade request because most of the team is leaving,Very Negative,OPEN
+tkt_34,usr_19,Need to cancel my Pro plan immediately,Very Negative,CLOSED
+tkt_35,usr_20,We are switching to a cheaper provider next month,Negative,OPEN
+tkt_36,usr_20,"Dashboard is far too slow to be usable, requesting a refund",Negative,OPEN
+tkt_37,usr_21,We are switching to a cheaper provider next month,Negative,OPEN
+tkt_38,usr_21,Seat downgrade request because most of the team is leaving,Neutral,CLOSED
+tkt_39,usr_22,"Dashboard is far too slow to be usable, requesting a refund",Negative,OPEN
+tkt_40,usr_23,Seat downgrade request because most of the team is leaving,Very Negative,OPEN
+tkt_41,usr_23,"Dashboard is far too slow to be usable, requesting a refund",Negative,OPEN
+tkt_42,usr_23,Your competitor offers the same features at half the price,Very Negative,OPEN
+tkt_43,usr_24,"Dashboard is far too slow to be usable, requesting a refund",Very Negative,OPEN
+tkt_44,usr_25,Export took three hours and timed out twice,Negative,OPEN
+tkt_45,usr_30,Where do I configure single sign on,Neutral,CLOSED
+tkt_46,usr_32,Thanks for the quick fix on the report export,Neutral,CLOSED
+tkt_47,usr_35,Need help understanding the invoice breakdown,Negative,CLOSED
+tkt_48,usr_44,Requesting a walkthrough of the analytics tab,Neutral,CLOSED
+tkt_49,usr_51,Need help understanding the invoice breakdown,Neutral,CLOSED
+tkt_50,usr_54,Requesting a walkthrough of the analytics tab,Negative,OPEN
+tkt_51,usr_56,Where do I configure single sign on,Negative,OPEN
+tkt_52,usr_57,Can you add CSV import for contacts,Negative,OPEN
+tkt_53,usr_58,Need help understanding the invoice breakdown,Negative,CLOSED
+tkt_54,usr_67,Need help understanding the invoice breakdown,Neutral,OPEN
+tkt_55,usr_69,Question about the API rate limits,Negative,CLOSED
+tkt_56,usr_70,Minor typo on the settings page,Neutral,CLOSED
+tkt_57,usr_71,Question about the API rate limits,Neutral,OPEN
+tkt_58,usr_74,Rescheduling our onboarding call to next week,Very Negative,OPEN
+tkt_59,usr_79,Requesting a walkthrough of the analytics tab,Neutral,CLOSED
+tkt_60,usr_88,Requesting a walkthrough of the analytics tab,Negative,OPEN
+tkt_61,usr_90,How do I invite a new team member,Negative,CLOSED
+tkt_62,usr_93,Question about the API rate limits,Negative,CLOSED
+tkt_63,usr_96,How do I invite a new team member,Negative,OPEN
+tkt_64,usr_99,Minor typo on the settings page,Neutral,OPEN
+tkt_65,usr_100,Can you add CSV import for contacts,Neutral,OPEN

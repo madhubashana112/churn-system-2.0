@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_macros.html" as components %}
+
+{% block title %}Churn AI &mdash; Telecom retention{% endblock %}
+
+{#- Cyan: reads as network/telemetry, and stays clear of the red and amber the
+    risk tiers use so a chart never looks like an alert. -#}
+{% block theme_vars %}--accent:#0891b2;--accent-soft:#cffafe;--accent-ink:#155e75;{% endblock %}
+{% block brand_mark %}T{% endblock %}
+{% block brand_name %}Telecom Retention{% endblock %}
+
+{% block page_eyebrow %}Telecom &amp; ISP &middot; subscriber base{% endblock %}
+{% block page_title %}Subscriber churn dashboard{% endblock %}
+{% block page_subtitle %}
+    Dropped calls concentrated on one tower are an infrastructure fault, not a pricing
+    problem &mdash; the response is engineering, not a discount. Widening top-up intervals
+    are the earliest signal that a subscriber is already half gone.
+{% endblock %}
+
+{% block upload_hint %}
+    Expected: a subscriber table, network CDRs, recharge history and complaints.
+    CSV, TSV or a multi-sheet .xlsx workbook.
+{% endblock %}
+{% block dropzone_hint %}or click to browse &mdash; subscribers.csv, network_cdrs.csv, recharge_history.csv, complaints.csv{% endblock %}
+
+{% block sidebar_sector_links %}
+    <button type="button" class="sidebar__link" data-scroll-to="chart-region_risk"><span>&#9873;</span> Regional risk</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-tower_health"><span>&#9641;</span> Tower health</button>
+    <button type="button" class="sidebar__link" data-scroll-to="chart-recharge_gap"><span>&#8987;</span> Top-up cadence</button>
+    <button type="button" class="sidebar__link" data-scroll-to="focus-queue"><span>&#9888;</span> Fault queue</button>
+{% endblock %}
+
+{% block kpi_section_title %}Network and subscriber overview{% endblock %}
+{% block kpi_keys %}regional_impact,worst_tower,dropped_calls,at_risk,recharge_lapse,port_out_intent{% endblock %}
+
+{% block charts_section_title %}Network signals{% endblock %}
+{% block charts_grid_class %}grid grid--charts-wide{% endblock %}
+{% block sector_charts %}
+    {{ components.chart_panel("region_risk", "Risk by region",
+       "A regional spike points at infrastructure rather than pricing") }}
+    {{ components.chart_panel("tower_health", "Dropped-call rate by tower",
+       "Same tower, at-risk against healthy subscribers — a gap here is a local fault") }}
+    {{ components.chart_panel("recharge_gap", "Top-up cadence",
+       "Widening gaps are the earliest observable signal of a subscriber leaving") }}
+{% endblock %}
+
+{% block sector_panel %}
+    {{ components.focus_queue(
+        "Regional network fault queue",
+        "Subscribers whose dropped calls concentrate on a single tower above the volume floor. Retaining them needs a fix, not an offer.",
+        "Regional fault", "Tower",
+        "No subscriber shows a single-tower concentration of dropped calls.",
+        value="Yes", match="equals") }}
+{% endblock %}
+
+{% block table_title %}Subscribers by churn risk{% endblock %}
+{% block table_subtitle %}
+    Plan, region, home tower, dropped-call rate and top-up recency come from the CDRs and recharge history.
+{% endblock %}

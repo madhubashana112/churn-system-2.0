@@ -1,21 +1,61 @@
 dispute_id,account_id,reason,open_date
-dsp_1,acc_86,Duplicate,2026-08-12
-dsp_2,acc_71,Duplicate,2026-08-07
-dsp_3,acc_23,Fraudulent,2026-08-10
-dsp_4,acc_41,Fraudulent,2026-08-03
-dsp_5,acc_93,Not Received,2026-08-29
-dsp_6,acc_80,Duplicate,2026-08-26
-dsp_7,acc_28,Not Received,2026-08-03
-dsp_8,acc_48,Fraudulent,2026-08-06
-dsp_9,acc_38,Duplicate,2026-08-26
-dsp_10,acc_31,Not Received,2026-08-11
-dsp_11,acc_14,Not Received,2026-08-30
-dsp_12,acc_97,Not Received,2026-08-06
-dsp_13,acc_73,Fraudulent,2026-08-06
-dsp_14,acc_91,Fraudulent,2026-08-14
-dsp_15,acc_88,Fraudulent,2026-08-09
-dsp_16,acc_77,Duplicate,2026-08-30
-dsp_17,acc_90,Fraudulent,2026-08-20
-dsp_18,acc_29,Duplicate,2026-08-10
-dsp_19,acc_51,Not Received,2026-08-27
-dsp_20,acc_49,Not Received,2026-08-12
+dsp_1,acc_1,Fraudulent,2025-04-27
+dsp_2,acc_1,Fraudulent,2025-05-28
+dsp_3,acc_2,Not Received,2025-04-26
+dsp_4,acc_2,Duplicate,2025-04-23
+dsp_5,acc_3,Fraudulent,2025-05-14
+dsp_6,acc_4,Not Received,2025-05-06
+dsp_7,acc_5,Fraudulent,2025-04-23
+dsp_8,acc_6,Fraudulent,2025-05-15
+dsp_9,acc_7,Not Received,2025-04-18
+dsp_10,acc_7,Not Received,2025-05-18
+dsp_11,acc_7,Fraudulent,2025-05-28
+dsp_12,acc_8,Fraudulent,2025-05-08
+dsp_13,acc_9,Fraudulent,2025-04-28
+dsp_14,acc_9,Duplicate,2025-05-25
+dsp_15,acc_10,Fraudulent,2025-05-19
+dsp_16,acc_10,Duplicate,2025-04-21
+dsp_17,acc_10,Not Received,2025-04-30
+dsp_18,acc_11,Fraudulent,2025-04-20
+dsp_19,acc_11,Not Received,2025-05-17
+dsp_20,acc_12,Duplicate,2025-04-25
+dsp_21,acc_12,Duplicate,2025-06-01
+dsp_22,acc_12,Duplicate,2025-05-03
+dsp_23,acc_13,Not Received,2025-05-29
+dsp_24,acc_14,Fraudulent,2025-05-22
+dsp_25,acc_15,Fraudulent,2025-04-25
+dsp_26,acc_15,Fraudulent,2025-05-13
+dsp_27,acc_16,Not Received,2025-04-28
+dsp_28,acc_16,Fraudulent,2025-05-13
+dsp_29,acc_16,Fraudulent,2025-04-27
+dsp_30,acc_17,Not Received,2025-04-20
+dsp_31,acc_17,Fraudulent,2025-05-19
+dsp_32,acc_17,Fraudulent,2025-05-20
+dsp_33,acc_18,Duplicate,2025-04-26
+dsp_34,acc_19,Fraudulent,2025-05-30
+dsp_35,acc_19,Fraudulent,2025-04-29
+dsp_36,acc_20,Fraudulent,2025-05-27
+dsp_37,acc_21,Fraudulent,2025-05-25
+dsp_38,acc_21,Fraudulent,2025-05-10
+dsp_39,acc_22,Not Received,2025-05-15
+dsp_40,acc_23,Duplicate,2025-05-27
+dsp_41,acc_23,Not Received,2025-05-24
+dsp_42,acc_23,Fraudulent,2025-05-20
+dsp_43,acc_24,Duplicate,2025-04-30
+dsp_44,acc_25,Duplicate,2025-04-26
+dsp_45,acc_34,Duplicate,2025-04-27
+dsp_46,acc_38,Duplicate,2025-04-20
+dsp_47,acc_45,Not Received,2025-05-07
+dsp_48,acc_50,Duplicate,2025-05-14
+dsp_49,acc_52,Not Received,2025-05-01
+dsp_50,acc_62,Not Received,2025-05-01
+dsp_51,acc_63,Fraudulent,2025-05-06
+dsp_52,acc_65,Duplicate,2025-05-25
+dsp_53,acc_68,Not Received,2025-05-16
+dsp_54,acc_69,Duplicate,2025-05-02
+dsp_55,acc_77,Duplicate,2025-04-23
+dsp_56,acc_79,Duplicate,2025-04-19
+dsp_57,acc_87,Not Received,2025-05-01
+dsp_58,acc_89,Duplicate,2025-05-26
+dsp_59,acc_91,Not Received,2025-05-09
+dsp_60,acc_100,Fraudulent,2025-04-26

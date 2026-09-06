@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+{% import "_macros.html" as components %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Churn AI{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="app-shell"
+      style="{% block theme_vars %}--accent:#4f46e5;--accent-soft:#eef2ff;--accent-ink:#312e81;{% endblock %}"
+      data-sector="{{ sector_key | default('', true) }}"
+      data-tenant-id="{{ tenant_id | default('', true) }}"{% block body_attrs %}{% endblock %}>
+
+<aside class="sidebar">
+    <div>
+        <div class="sidebar__brand">
+            <span class="sidebar__mark">{% block brand_mark %}C{% endblock %}</span>
+            <span>
+                {% block brand_name %}Churn AI{% endblock %}
+                <span class="sidebar__tenant" id="tenant-name">{{ tenant_name | default('No tenant', true) }}</span>
+            </span>
+        </div>
+    </div>
+
+    {% block sidebar_nav %}<nav>
+        <p class="sidebar__section">Workspace</p>
+        <div class="sidebar__nav">
+            <button type="button" class="sidebar__link is-active" data-scroll-to="upload-panel">
+                <span>&#8682;</span> Data upload
+            </button>
+            <button type="button" class="sidebar__link" data-scroll-to="schema-panel" disabled>
+                <span>&#9881;</span> Schema discovery
+            </button>
+            <button type="button" class="sidebar__link" data-scroll-to="kpi-section" disabled>
+                <span>&#9636;</span> Risk overview
+            </button>
+            <button type="button" class="sidebar__link" data-scroll-to="predictions-panel" disabled>
+                <span>&#9776;</span> Customers
+            </button>
+        </div>
+    </nav>{% endblock %}
+
+    <nav>
+        <p class="sidebar__section">This sector</p>
+        <div class="sidebar__nav">
+            {% block sidebar_sector_links %}{% endblock %}
+        </div>
+    </nav>
+
+    <div class="sidebar__foot">
+        <span id="mode-badge" class="pill pill--plain">checking mode&hellip;</span>
+        <p class="mt-2" id="mode-note"></p>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="page-head">
+        <p class="page-head__eyebrow">{% block page_eyebrow %}{{ sector_label | default('', true) }}{% endblock %}</p>
+        <h1 class="page-head__title">{% block page_title %}Churn dashboard{% endblock %}</h1>
+        <p class="page-head__subtitle">{% block page_subtitle %}{% endblock %}</p>
+    </header>
+
+    {% block main_content %}<div id="banner-slot" class="banner-slot"></div>
+
+    <!-- Upload ---------------------------------------------------------- -->
+    <section class="panel section" id="upload-panel">
+        <div class="panel__head">
+            <div>
+                <h2 class="panel__title">Upload raw exports</h2>
+                <p class="panel__subtitle">{% block upload_hint %}CSV, TSV or a multi-sheet .xlsx workbook. Every sheet becomes its own table.{% endblock %}</p>
+            </div>
+            <span class="pill pill--plain" id="upload-count">0 files</span>
+        </div>
+        <div class="panel__body">
+            <div class="dropzone" id="dropzone" tabindex="0" role="button"
+                 aria-label="Drop data exports here or browse for files">
+                <div class="dropzone__icon">&#8681;</div>
+                <p class="dropzone__title">Drop your exports here</p>
+                <p class="dropzone__hint">{% block dropzone_hint %}or click to browse &mdash; you can add files one at a time{% endblock %}</p>
+                <div class="chip-row" id="file-chips"></div>
+            </div>
+            <input type="file" id="file-input" multiple class="hidden"
+                   accept=".csv,.tsv,.txt,.xlsx,.xlsm">
+
+            <div class="flex flex-wrap items-center gap-3 mt-4">
+                <button type="button" id="analyze-ai-btn" class="btn btn--primary" disabled>
+                    Analyze with AI model
+                </button>
+                <button type="button" id="analyze-system-btn" class="btn btn--ghost" disabled>
+                    Analyze with system model
+                </button>
+                <button type="button" id="demo-btn" class="btn btn--ghost">Load sample data</button>
+                <button type="button" id="clear-btn" class="btn btn--ghost" disabled>Clear files</button>
+                <span id="upload-progress" class="flex items-center gap-2 text-sm text-gray-500" hidden>
+                    <span class="spinner"></span> <span id="upload-progress-text">Working&hellip;</span>
+                </span>
+            </div>
+            <p id="engine-note" class="text-sm text-gray-500 mt-2"></p>
+        </div>
+    </section>
+
+    <!-- Everything below stays hidden until a run exists ----------------- -->
+    <div id="results-section" hidden>
+
+        <!-- Schema discovery -------------------------------------------- -->
+        <section class="panel section" id="schema-panel">
+            <div class="panel__head">
+                <div>
+                    <h2 class="panel__title">Schema discovery</h2>
+                    <p class="panel__subtitle">
+                        Join key resolved to <span class="mono role-tag" id="schema-key">&mdash;</span>
+                        across <span id="schema-table-count">0</span> tables
+                    </p>
+                </div>
+                <span class="pill pill--plain" id="schema-source">AI resolved</span>
+            </div>
+            <div class="panel__body panel__body--flush">
+                <div class="table-scroll" style="max-height:20rem">
+                    <table class="schema-table">
+                        <thead>
+                        <tr>
+                            <th>Table</th>
+                            <th>Role</th>
+                            <th>Entity key</th>
+                            <th>Timestamp</th>
+                            <th>Discarded as noise</th>
+                        </tr>
+                        </thead>
+                        <tbody id="schema-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- KPI cards ---------------------------------------------------- -->
+        <section class="section" id="kpi-section">
+            <h2 class="section__title">{% block kpi_section_title %}Risk overview{% endblock %}</h2>
+            <div class="grid grid--kpis" id="kpi-grid"
+                 data-kpi-keys="{% block kpi_keys %}at_risk{% endblock %}"></div>
+        </section>
+
+        <!-- Sector charts, declared by each dashboard -------------------- -->
+        <section class="section" id="sector-charts">
+            <h2 class="section__title">{% block charts_section_title %}Signals{% endblock %}</h2>
+            <div class="{% block charts_grid_class %}grid grid--charts{% endblock %}">
+                {% block sector_charts %}{% endblock %}
+            </div>
+        </section>
+
+        <!-- Sector-specific extra panel ---------------------------------- -->
+        {% block sector_panel %}{% endblock %}
+
+        <!-- Charts every sector shares ------------------------------------ -->
+        <section class="section">
+            <h2 class="section__title">Distribution</h2>
+            <div class="grid grid--charts">
+                {% block overview_charts %}
+                {{ components.chart_panel("tier_mix", "Customers by risk tier", size="short") }}
+                {{ components.chart_panel("probability_histogram", "Churn probability distribution", size="short") }}
+                {% endblock %}
+            </div>
+        </section>
+
+        <!-- Predictions --------------------------------------------------- -->
+        <section class="panel section" id="predictions-panel">
+            <div class="panel__head">
+                <div>
+                    <h2 class="panel__title">{% block table_title %}Scored customers{% endblock %}</h2>
+                    <p class="panel__subtitle">{% block table_subtitle %}Sorted by predicted churn probability, highest first.{% endblock %}</p>
+                </div>
+                <div class="table-tools">
+                    <label class="text-xs text-gray-500 font-semibold uppercase tracking-wide" for="tier-filter">Tier</label>
+                    <select id="tier-filter" class="select">
+                        <option value="ALL" selected>All tiers</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                    <input id="search-filter" class="input" type="search" placeholder="Filter by ID&hellip;"
+                           style="width:11rem">
+                </div>
+            </div>
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead id="predictions-head"></thead>
+                    <tbody id="predictions-body"></tbody>
+                </table>
+            </div>
+            <div class="panel__body panel__body--tight">
+                <p class="text-xs text-gray-500" id="row-count-note"></p>
+            </div>
+        </section>
+    </div>
+
+    <div class="panel section" id="empty-state">
+        <div class="empty-state">
+            <div class="empty-state__icon">&#9635;</div>
+            <p class="empty-state__title">No analysis yet</p>
+            <p class="empty-state__hint" id="empty-state-hint">
+                Upload this tenant's exports above. The schema is resolved first, then every customer is scored.
+            </p>
+        </div>
+    </div>{% endblock %}
+</main>
+
+{% block drawer_markup %}<div class="drawer-scrim" id="drawer-scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="Retention playbook">
+    <div class="drawer__head">
+        <div>
+            <h2 class="drawer__title" id="drawer-title">Retention playbook</h2>
+            <p class="text-xs text-gray-500 mt-1" id="drawer-subtitle"></p>
+        </div>
+        <button type="button" class="icon-btn" id="close-drawer" aria-label="Close">&times;</button>
+    </div>
+    <div class="drawer__body" id="drawer-body"></div>
+    <div class="drawer__foot">
+        <button type="button" class="btn btn--success btn--block" id="deploy-btn">Deploy intervention</button>
+        <p class="text-xs text-gray-500 mt-2 text-center" id="deploy-note"></p>
+    </div>
+</aside>{% endblock %}
+
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

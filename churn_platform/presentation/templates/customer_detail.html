@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{#- Mirror the sector's colourway so this page reads as part of the dashboard
+    the user came from. One template serves all three sectors; the route
+    resolves sector_key from the tenant record, never from the URL. -#}
+{% set themes = {
+    'saas': ('#4f46e5', '#eef2ff', '#312e81', 'S', 'SaaS Retention'),
+    'telecom': ('#0891b2', '#cffafe', '#155e75', 'T', 'Telecom Retention'),
+    'fintech': ('#059669', '#d1fae5', '#064e3b', 'F', 'FinTech Retention')
+} %}
+{% set theme = themes.get(sector_key, ('#4f46e5', '#eef2ff', '#312e81', 'C', 'Churn AI')) %}
+
+{% block title %}Churn AI &mdash; {{ entity_id }}{% endblock %}
+{% block theme_vars %}--accent:{{ theme[0] }};--accent-soft:{{ theme[1] }};--accent-ink:{{ theme[2] }};{% endblock %}
+{% block brand_mark %}{{ theme[3] }}{% endblock %}
+{% block brand_name %}{{ theme[4] }}{% endblock %}
+{% block body_attrs %} data-entity-id="{{ entity_id }}"{% endblock %}
+
+{% block page_eyebrow %}{{ sector_label }} &middot; customer detail{% endblock %}
+{% block page_title %}<span class="mono">{{ entity_id }}</span>{% endblock %}
+{% block page_subtitle %}
+    Why this customer scored the way they did: every stored signal from the latest
+    analysis, positioned against the tenant's whole base.
+{% endblock %}
+
+{% block sidebar_nav %}
+    <nav>
+        <p class="sidebar__section">Workspace</p>
+        <div class="sidebar__nav">
+            <a class="sidebar__link" href="/dashboard?tenant_id={{ tenant_id }}">
+                <span>&#8592;</span> Back to dashboard
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block main_content %}
+    <div id="banner-slot" class="banner-slot"></div>
+
+    <section class="section" id="detail-score-section">
+        <h2 class="section__title">Churn score</h2>
+        <div class="grid grid--kpis" id="detail-score"></div>
+    </section>
+
+    <section class="panel section" id="detail-evidence-panel">
+        <div class="panel__head">
+            <div>
+                <h2 class="panel__title">Feature evidence</h2>
+                <p class="panel__subtitle">
+                    Every numeric signal stored for this customer, compared against the same
+                    signal across the whole base. The most unusual readings lead.
+                </p>
+            </div>
+            <span class="pill pill--plain" id="evidence-count">&mdash;</span>
+        </div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead id="detail-evidence-head"></thead>
+                <tbody id="detail-evidence"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel section" id="detail-playbook-panel">
+        <div class="panel__head">
+            <div>
+                <h2 class="panel__title">Why, and what to do</h2>
+                <p class="panel__subtitle">The reason the scorer recorded and the intervention it implies.</p>
+            </div>
+        </div>
+        <div class="panel__body" id="detail-playbook"></div>
+    </section>
+
+    <div class="panel section" id="detail-empty" hidden>
+        <div class="empty-state">
+            <div class="empty-state__icon">&#9635;</div>
+            <p class="empty-state__title">No such customer here</p>
+            <p class="empty-state__hint" id="detail-empty-hint">
+                This customer is not part of the tenant's latest analysis.
+            </p>
+        </div>
+    </div>
+{% endblock %}
+
+{#- The drawer belongs to the predictions table, which this page does not have. -#}
+{% block drawer_markup %}{% endblock %}

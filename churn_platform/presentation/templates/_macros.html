@@ -1,0 +1,64 @@
+{#- Reusable dashboard components.
+
+    Each sector template imports this file and declares which charts and which
+    focus queue it wants. app.js is driven entirely by the `data-chart` and
+    `data-queue-*` attributes these macros emit, so no sector needs its own
+    JavaScript. Every panel also gets a predictable id, which is what the sidebar
+    links scroll to.
+-#}
+
+{%- macro chart_panel(key, title, subtitle="", size="", span=False) -%}
+<section class="panel{% if span %} panel--span{% endif %}" id="chart-{{ key }}">
+    <div class="panel__head">
+        <div>
+            <h3 class="panel__title" data-chart-title="{{ key }}">{{ title }}</h3>
+            <p class="panel__subtitle" data-chart-subtitle="{{ key }}">{{ subtitle }}</p>
+        </div>
+    </div>
+    <div class="panel__body">
+        <div class="chart-frame{% if size %} chart-frame--{{ size }}{% endif %}">
+            <canvas data-chart="{{ key }}"></canvas>
+        </div>
+    </div>
+</section>
+{%- endmacro -%}
+
+{#- A sector-specific action queue, filtered out of the scored rows.
+
+    `match` is either "equals" (the highlight must read exactly `value`) or
+    "nonzero" (any measured value above zero), because "has a failed invoice" and
+    "is flagged as a regional fault" are different questions. The queue lists
+    individual customers rather than group totals: it is a work list, so each row
+    opens that customer's playbook. -#}
+{%- macro focus_queue(title, subtitle, label, group, empty_message, value="", match="equals") -%}
+<section class="panel section" id="focus-queue"
+         data-queue-label="{{ label }}"
+         data-queue-value="{{ value }}"
+         data-queue-match="{{ match }}"
+         data-queue-group="{{ group }}"
+         data-queue-empty="{{ empty_message }}">
+    <div class="panel__head">
+        <div>
+            <h2 class="panel__title">{{ title }}</h2>
+            <p class="panel__subtitle">{{ subtitle }}</p>
+        </div>
+        <span class="pill pill--plain" id="queue-count">0</span>
+    </div>
+    <div class="panel__body panel__body--flush">
+        <div class="table-scroll" style="max-height:22rem">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>{{ group }}</th>
+                    <th>Customer</th>
+                    <th>Risk</th>
+                    <th>Probability</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody id="queue-body"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{%- endmacro -%}

@@ -1,31 +1,57 @@
 comp_id,subscriber_id,category,notes
-comp_1,sub_54,NETWORK,Customer issue reported
-comp_2,sub_72,NETWORK,Customer issue reported
-comp_3,sub_49,NETWORK,Customer issue reported
-comp_4,sub_99,GENERAL,Customer issue reported
-comp_5,sub_11,BILLING,Customer issue reported
-comp_6,sub_88,BILLING,Customer issue reported
-comp_7,sub_49,MNP_PORT_OUT,Customer issue reported
-comp_8,sub_21,BILLING,Customer issue reported
-comp_9,sub_66,BILLING,Customer issue reported
-comp_10,sub_63,BILLING,Customer issue reported
-comp_11,sub_83,GENERAL,Customer issue reported
-comp_12,sub_28,GENERAL,Customer issue reported
-comp_13,sub_17,MNP_PORT_OUT,Customer issue reported
-comp_14,sub_6,BILLING,Customer issue reported
-comp_15,sub_19,GENERAL,Customer issue reported
-comp_16,sub_56,MNP_PORT_OUT,Customer issue reported
-comp_17,sub_28,MNP_PORT_OUT,Customer issue reported
-comp_18,sub_66,MNP_PORT_OUT,Customer issue reported
-comp_19,sub_38,NETWORK,Customer issue reported
-comp_20,sub_37,MNP_PORT_OUT,Customer issue reported
-comp_21,sub_68,GENERAL,Customer issue reported
-comp_22,sub_86,BILLING,Customer issue reported
-comp_23,sub_90,NETWORK,Customer issue reported
-comp_24,sub_49,BILLING,Customer issue reported
-comp_25,sub_43,BILLING,Customer issue reported
-comp_26,sub_36,NETWORK,Customer issue reported
-comp_27,sub_58,NETWORK,Customer issue reported
-comp_28,sub_13,NETWORK,Customer issue reported
-comp_29,sub_52,NETWORK,Customer issue reported
-comp_30,sub_58,GENERAL,Customer issue reported
+comp_1,sub_1,MNP_PORT_OUT,Network coverage in my area has been terrible for three weeks
+comp_2,sub_1,MNP_PORT_OUT,Network coverage in my area has been terrible for three weeks
+comp_3,sub_2,NETWORK,Switching providers because data speeds are unusable
+comp_4,sub_3,BILLING,"Port out request, the competitor offers better prepaid rates"
+comp_5,sub_3,MNP_PORT_OUT,Requesting MNP port out to another operator immediately
+comp_6,sub_4,MNP_PORT_OUT,"MNP port out code requested, moving to a cheaper network"
+comp_7,sub_4,BILLING,"Calls keep dropping, I want to cancel my connection"
+comp_8,sub_5,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_9,sub_5,NETWORK,"Calls keep dropping, I want to cancel my connection"
+comp_10,sub_6,NETWORK,"Dropped every call today, this is unacceptable, refund my recharge"
+comp_11,sub_7,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_12,sub_7,MNP_PORT_OUT,Switching providers because data speeds are unusable
+comp_13,sub_8,BILLING,Billing dispute unresolved after multiple calls to support
+comp_14,sub_8,NETWORK,Billing dispute unresolved after multiple calls to support
+comp_15,sub_9,MNP_PORT_OUT,Requesting MNP port out to another operator immediately
+comp_16,sub_9,MNP_PORT_OUT,Requesting MNP port out to another operator immediately
+comp_17,sub_10,BILLING,Network coverage in my area has been terrible for three weeks
+comp_18,sub_11,MNP_PORT_OUT,Switching providers because data speeds are unusable
+comp_19,sub_12,BILLING,Requesting MNP port out to another operator immediately
+comp_20,sub_13,NETWORK,"Port out request, the competitor offers better prepaid rates"
+comp_21,sub_14,MNP_PORT_OUT,Network coverage in my area has been terrible for three weeks
+comp_22,sub_14,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_23,sub_15,NETWORK,"Calls keep dropping, I want to cancel my connection"
+comp_24,sub_15,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_25,sub_16,BILLING,Requesting MNP port out to another operator immediately
+comp_26,sub_17,NETWORK,"MNP port out code requested, moving to a cheaper network"
+comp_27,sub_17,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_28,sub_18,MNP_PORT_OUT,"Calls keep dropping, I want to cancel my connection"
+comp_29,sub_19,MNP_PORT_OUT,Switching providers because data speeds are unusable
+comp_30,sub_20,NETWORK,Network coverage in my area has been terrible for three weeks
+comp_31,sub_21,MNP_PORT_OUT,"Dropped every call today, this is unacceptable, refund my recharge"
+comp_32,sub_21,NETWORK,Requesting MNP port out to another operator immediately
+comp_33,sub_22,MNP_PORT_OUT,"Port out request, the competitor offers better prepaid rates"
+comp_34,sub_22,MNP_PORT_OUT,Network coverage in my area has been terrible for three weeks
+comp_35,sub_23,NETWORK,"Dropped every call today, this is unacceptable, refund my recharge"
+comp_36,sub_23,BILLING,Switching providers because data speeds are unusable
+comp_37,sub_24,MNP_PORT_OUT,Requesting MNP port out to another operator immediately
+comp_38,sub_24,MNP_PORT_OUT,"Calls keep dropping, I want to cancel my connection"
+comp_39,sub_25,BILLING,Network coverage in my area has been terrible for three weeks
+comp_40,sub_27,BILLING,Asked to update the billing address on the account
+comp_41,sub_32,NETWORK,Query about the last recharge receipt
+comp_42,sub_41,MNP_PORT_OUT,Requested a duplicate SIM for a new handset
+comp_43,sub_50,NETWORK,General enquiry about add on data packs
+comp_44,sub_51,BILLING,Asked to update the billing address on the account
+comp_45,sub_53,MNP_PORT_OUT,Asked how the loyalty points redemption works
+comp_46,sub_65,GENERAL,Asked to update the billing address on the account
+comp_47,sub_70,GENERAL,Requested a duplicate SIM for a new handset
+comp_48,sub_75,GENERAL,Requested a data plan upgrade for the family line
+comp_49,sub_76,BILLING,Asked how to enable international roaming
+comp_50,sub_77,NETWORK,Requested a data plan upgrade for the family line
+comp_51,sub_78,GENERAL,Asked how to enable international roaming
+comp_52,sub_83,GENERAL,General enquiry about add on data packs
+comp_53,sub_87,GENERAL,Asked how the loyalty points redemption works
+comp_54,sub_88,BILLING,Asked to update the billing address on the account
+comp_55,sub_91,GENERAL,Asked to update the billing address on the account
+comp_56,sub_93,NETWORK,General enquiry about add on data packs

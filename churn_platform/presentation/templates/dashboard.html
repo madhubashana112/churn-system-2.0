@@ -3,78 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Churn AI - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Churn AI &mdash; opening your dashboard</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>body { --accent:#4f46e5; --accent-soft:#eef2ff; }</style>
 </head>
-<body class="bg-gray-100 font-sans">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-64 bg-indigo-900 text-white p-6">
-            <h2 class="text-2xl font-bold mb-8" id="tenant-name">Dashboard</h2>
-            <nav class="space-y-4">
-                <a href="#" class="block hover:bg-indigo-800 p-2 rounded">Overview</a>
-                <a href="#" class="block hover:bg-indigo-800 p-2 rounded text-yellow-300">Data Upload</a>
-            </nav>
-        </div>
-
-        <!-- Main Content -->
-        <div class="flex-1 p-8 overflow-y-auto">
-            <h1 class="text-3xl font-bold mb-6 text-gray-800">Adaptive Churn Dashboard (<span id="sector-display"></span>)</h1>
-            
-            <!-- Upload Zone -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-8 border-2 border-dashed border-gray-300">
-                <h3 class="text-lg font-semibold mb-4">Upload Raw Data Sheets</h3>
-                <p class="text-gray-500 mb-4 text-sm">Drop multiple CSV files here (e.g. users, events, invoices, tickets).</p>
-                <input type="file" id="file-upload" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
-                <button id="analyze-btn" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 hidden">Analyze Data with Qwen AI</button>
-                
-                <!-- Loading State -->
-                <div id="loading" class="hidden mt-4 text-indigo-600 animate-pulse">
-                    <p>🤖 Qwen AI is analyzing schemas, synthesizing features, and predicting churn risk... Please wait.</p>
-                </div>
-            </div>
-
-            <!-- Results Section (Hidden initially) -->
-            <div id="results-section" class="hidden space-y-8">
-                <!-- Schema Mapping Modal inline -->
-                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                    <h3 class="text-lg font-semibold mb-2">AI Schema Discovery</h3>
-                    <p class="text-sm text-gray-600 mb-4">Primary Join Key: <span id="primary-key" class="font-mono bg-gray-200 px-1"></span></p>
-                    <ul id="schema-list" class="list-disc pl-5 text-sm space-y-1 text-gray-700"></ul>
-                </div>
-
-                <!-- Predictions Table -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-4">High Risk Customers</h3>
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Tier</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Probability</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="predictions-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Rows added by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Intervention Drawer -->
-        <div id="drawer" class="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 p-6 overflow-y-auto">
-            <button id="close-drawer" class="text-gray-500 hover:text-gray-700 float-right">✕</button>
-            <h2 class="text-2xl font-bold mb-4">Retention Playbook</h2>
-            <div id="drawer-content" class="space-y-4">
-                <!-- Populated by JS -->
-            </div>
-        </div>
+<body>
+<div class="onboard">
+    <div class="onboard__card" style="text-align:center">
+        <div class="spinner" style="margin:0 auto 1rem"></div>
+        <p class="onboard__title" id="boot-title">Opening your dashboard&hellip;</p>
+        <p class="onboard__subtitle" id="boot-subtitle">
+            Each sector gets its own dashboard, so we look up which one this tenant registered under.
+        </p>
+        <a href="/" class="btn btn--ghost" id="boot-link" hidden>Back to onboarding</a>
     </div>
-    
-    <script src="/static/js/app.js"></script>
+</div>
+
+<script>
+    // The sector dashboards are chosen server-side from the tenant record, which
+    // is the only trustworthy source: localStorage can hold a sector the tenant
+    // was never registered under. This page exists purely to hand the stored
+    // tenant id to that route.
+    (function () {
+        const tenantId = localStorage.getItem('tenant_id');
+        if (tenantId) {
+            window.location.replace('/dashboard?tenant_id=' + encodeURIComponent(tenantId));
+            return;
+        }
+        document.getElementById('boot-title').textContent = 'No tenant selected';
+        document.getElementById('boot-subtitle').textContent =
+            'Register a tenant first — the sector you pick decides which dashboard you get.';
+        document.getElementById('boot-link').hidden = false;
+    })();
+</script>
 </body>
 </html>
