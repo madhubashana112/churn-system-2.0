@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ 'Sign up' if signup else 'Log in' }} — Churn AI</title>
+<title>{{ 'Welcome' if welcome else ('Sign up' if signup else 'Log in') }} — Churn AI</title>
 <script src="/static/js/theme.js"></script>
 <link rel="stylesheet" href="/static/css/styles.css">
 </head>
@@ -18,7 +18,14 @@
 </aside>
 <main class="landing__form">
 <div class="landing__card">
-<div class="account-toolbar"><button type="button" class="btn btn--ghost" data-theme-toggle>Dark mode</button></div>
+<div class="account-toolbar">{% if not welcome %}<a href="/welcome" class="btn btn--ghost" data-back style="margin-right:auto" aria-label="Go back">&larr; Back</a>{% endif %}<button type="button" class="btn btn--ghost" data-theme-toggle>Dark mode</button></div>
+{% if welcome %}
+<p class="page-head__eyebrow">YOUR RETENTION WORKSPACE</p>
+<h1 class="onboard__title">Know your customers. Keep them closer.</h1>
+<p class="onboard__subtitle">Explore customer risk, understand the signals, and plan your next retention action.</p>
+<a href="/signup" class="btn btn--primary btn--block">Get started</a>
+<p class="auth-switch">Already have an account? <a href="/login">Log in</a></p>
+{% else %}
 <p class="page-head__eyebrow">YOUR RETENTION WORKSPACE</p>
 <h1 class="onboard__title">{{ 'Create your account' if signup else 'Welcome back' }}</h1>
 <p class="onboard__subtitle">{{ 'Start with your account. Set up your company next.' if signup else 'Log in to continue to your customer insights.' }}</p>
@@ -33,6 +40,7 @@
 <button type="submit" class="btn btn--primary btn--block" id="auth-submit" {% if storage_error %}disabled{% endif %}>{{ 'Create account' if signup else 'Log in' }}</button>
 </form>
 <p class="auth-switch">{% if signup %}Already have an account? <a href="/login">Log in</a>{% else %}New to Churn AI? <a href="/signup">Create an account</a>{% endif %}</p>
+{% endif %}
 </div>
 </main>
 </div>

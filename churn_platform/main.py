@@ -154,6 +154,11 @@ async def account_security(request: Request, call_next):
     return response
 
 
+@app.get("/welcome", response_class=HTMLResponse)
+async def welcome_page(request: Request):
+    return templates.TemplateResponse(request=request, name="auth.html", context={"welcome": True})
+
+
 @app.get("/login", response_class=HTMLResponse)
 @app.get("/signup", response_class=HTMLResponse)
 async def account_page(request: Request):

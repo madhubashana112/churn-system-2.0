@@ -16,7 +16,8 @@ customer list and a retention playbook per customer come out.
   250. They include scores, drivers, recommendations, evidence and analysis metadata.
   Spreadsheet formula-like text is escaped; CSV probabilities are fractions (0.8 = 80%).
 - **Dark mode:** toggle on account, onboarding, dashboard and customer pages. Defaults to
-  your operating-system preference and remembers your choice, including chart colors.
+  Light Mode and remembers your explicit choice, including chart colors. Account pages
+  include a Back button, with a public welcome page for direct visits.
 - **Persistence:** accounts, sessions, workspaces and the latest analysis survive local restarts.
 
 Start the app using the setup steps below, open `/signup`, create an account, then register

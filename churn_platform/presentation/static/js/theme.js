@@ -1,7 +1,6 @@
-/* Apply before paint; local preference wins over the operating system. */
+/* Apply before paint; Light Mode by default, with an explicit saved preference taking priority. */
 (function () {
-    const system = window.matchMedia('(prefers-color-scheme: dark)');
-    function saved() { try { return localStorage.getItem('churn-theme'); } catch (_) { return null; } }
+    function saved() { try { return localStorage.getItem('churn-theme') === 'dark' ? 'dark' : 'light'; } catch (_) { return null; } }
     function apply(theme) {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
@@ -12,7 +11,7 @@
         });
         window.dispatchEvent(new Event('themechange'));
     }
-    apply(saved() || (system.matches ? 'dark' : 'light'));
+    apply(saved() || 'light');
     document.addEventListener('DOMContentLoaded', () => {
         apply(document.documentElement.dataset.theme);
         document.querySelectorAll('[data-theme-toggle]').forEach(button => button.addEventListener('click', () => {
@@ -21,6 +20,5 @@
             apply(next);
         }));
     });
-    system.addEventListener('change', () => { if (!saved()) apply(system.matches ? 'dark' : 'light'); });
-    window.addEventListener('storage', e => { if (e.key === 'churn-theme') apply(saved() || (system.matches ? 'dark' : 'light')); });
+    window.addEventListener('storage', e => { if (e.key === 'churn-theme') apply(saved() || 'light'); });
 })();

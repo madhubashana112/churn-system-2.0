@@ -1,4 +1,14 @@
 (function () {
+    document.querySelectorAll('[data-back]').forEach(link => link.addEventListener('click', event => {
+        // Only return to public account pages, avoiding a logout -> protected
+        // dashboard -> login loop. Direct visits use the welcome link.
+        if (!document.referrer || window.history.length < 2) return;
+        const previous = new URL(document.referrer);
+        if (previous.origin === location.origin && previous.pathname !== location.pathname &&
+            ['/login', '/signup', '/welcome'].includes(previous.pathname)) {
+            event.preventDefault(); window.history.back();
+        }
+    }));
     const form = document.getElementById('auth-form');
     function clearWorkspace() {
         ['tenant_id', 'tenant_name', 'tenant_sector'].forEach(key => localStorage.removeItem(key));
