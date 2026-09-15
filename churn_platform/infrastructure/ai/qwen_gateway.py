@@ -13,7 +13,8 @@ import json
 import logging
 from typing import Any, Optional
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APIError
+from churn_platform.domain.ai_errors import AIServiceError
 
 from churn_platform.config import get_settings
 from churn_platform.domain.interfaces.i_ai_gateway import IAIGateway
@@ -85,11 +86,15 @@ class QwenGateway(IAIGateway):
 
     async def generate_json(self, system_prompt: str, user_prompt: str) -> dict:
         options = {}
-        if self.model.startswith("gemini-") and self.client.base_url.host == "generativelanguage.googleapis.com":
+        client = self.client
+        gemini = self.model.startswith("gemini-") and self.client.base_url.host == "generativelanguage.googleapis.com"
+        if gemini:
             # Bound thinking latency for interactive schema and batch analysis.
             options["reasoning_effort"] = "low"
+            # A daily quota cannot recover through immediate retries.
+            client = self.client.with_options(max_retries=0)
         try:
-            completion = await self.client.chat.completions.create(
+            completion = await client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -98,9 +103,21 @@ class QwenGateway(IAIGateway):
                 response_format={"type": "json_object"},
                 **options,
             )
-        except Exception:
-            logger.exception("Error calling the %s API", self.model)
-            raise
+        except APIError as exc:
+            status = getattr(exc, "status_code", None)
+            provider = "Gemini" if gemini else "The AI provider"
+            logger.warning("AI request failed: model=%s status=%s", self.model, status)
+            if status == 429:
+                body = json.dumps(getattr(exc, "body", {}), default=str).lower()
+                daily = "perday" in body or "per_day" in body or "per day" in body
+                message = (f"{provider}'s daily request quota has been reached. Wait for the quota to reset "
+                           "or choose Analyze with system model. Check your provider account's quota settings."
+                           if daily else f"{provider} is rate-limiting requests. Try again later or choose Analyze with system model.")
+                raise AIServiceError(message, 429, "AI_DAILY_QUOTA" if daily else "AI_RATE_LIMIT") from exc
+            if status in (401, 403):
+                raise AIServiceError(f"{provider} rejected the API credentials or permissions. Ask the site owner to check the AI configuration.",
+                                     503, "AI_CONFIGURATION") from exc
+            raise AIServiceError(f"{provider} is temporarily unavailable or timed out. Try again later or choose Analyze with system model.") from exc
 
         content = completion.choices[0].message.content
         try:

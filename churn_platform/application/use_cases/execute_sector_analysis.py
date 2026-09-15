@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Iterator, List, Sequence, Tuple
 
+from churn_platform.domain.ai_errors import AIServiceError
 from churn_platform.domain.interfaces.i_churn_core import IChurnCore
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.customer_features import CustomerFeatures
@@ -48,6 +49,10 @@ class ExecuteSectorAnalysisUseCase:
         for index, batch in enumerate(batches, start=1):
             try:
                 results.extend(await core.analyze(list(batch)))
+            except AIServiceError:
+                # Provider-wide failures must reach the caller with the correct
+                # status; do not overwrite prior results with an empty/partial run.
+                raise
             except Exception:
                 # The caller can see the shortfall by comparing the number of
                 # predictions against the number of entities it uploaded.

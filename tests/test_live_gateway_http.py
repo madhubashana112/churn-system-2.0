@@ -16,7 +16,8 @@ import httpx
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from openai import AsyncOpenAI, RateLimitError
+from openai import AsyncOpenAI
+from churn_platform.domain.ai_errors import AIServiceError
 
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.infrastructure.ai.cores.saas_core import SaasCore
@@ -138,8 +139,9 @@ def test_exhausted_retries_surface_as_an_error_rather_than_a_silent_empty_run():
     state: Dict[str, Any] = {"throttle_first": 99}
     gateway = gateway_against(state, max_retries=1)
 
-    with pytest.raises(RateLimitError):
+    with pytest.raises(AIServiceError) as failure:
         asyncio.run(gateway.generate_json("system", "user"))
+    assert failure.value.status_code == 429
     assert state["calls"] == 2  # the attempt plus one retry
 
 def test_gemini_json_requests_use_low_reasoning_without_changing_other_hosts():
@@ -156,4 +158,31 @@ def test_gemini_json_requests_use_low_reasoning_without_changing_other_hosts():
             assert state['bodies'][0]['response_format'] == {'type':'json_object'}
         finally:
             await gateway.client.close()
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize('status,body,expected_status,code', [
+    (429, {'error': {'message':'private provider details', 'details':[{'quotaId':'GenerateRequestsPerDayPerProjectPerModel-FreeTier'}]}},429,'AI_DAILY_QUOTA'),
+    (429, {'error': {'message':'rate limited'}},429,'AI_RATE_LIMIT'),
+    (503, {'error': {'message':'busy'}},503,'AI_UNAVAILABLE'),
+    (401, {'error': {'message':'invalid key'}},503,'AI_CONFIGURATION'),
+])
+def test_gemini_errors_are_safe_typed_and_not_retried(status,body,expected_status,code):
+    async def exercise():
+        calls=[]
+        async def handler(request):
+            calls.append(request)
+            return httpx.Response(status,json=body)
+        gateway=QwenGateway(api_key='private-test-secret',base_url='https://generativelanguage.googleapis.com/v1beta/openai/',model='gemini-3.6-flash',max_retries=4)
+        await gateway.client.close()
+        gateway.client=AsyncOpenAI(api_key='private-test-secret',base_url='https://generativelanguage.googleapis.com/v1beta/openai/',max_retries=4,
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+        try:
+            with pytest.raises(AIServiceError) as failure:
+                await gateway.generate_json('system','user')
+            assert failure.value.status_code==expected_status
+            assert failure.value.code==code
+            assert 'private' not in str(failure.value)
+            assert len(calls)==1
+        finally: await gateway.client.close()
     asyncio.run(exercise())

@@ -338,3 +338,32 @@ def test_failed_scoring_keeps_pending_upload_for_retry(client_tenant,monkeypatch
     assert run(get_analysis_repo().latest(tenant)) is None
     assert run(PendingUploadRepository().get(tenant,review['upload_session_id'])) is not None
     assert run(store.get(key_for(tenant,review['upload_session_id'])+':lock')) is None
+
+
+def test_schema_provider_quota_returns_actionable_429(client_tenant,monkeypatch):
+    from churn_platform.domain.ai_errors import AIServiceError
+    from churn_platform.presentation.api.v1 import upload as api
+    client,tenant=client_tenant
+    resolver=AsyncMock()
+    resolver.resolve.side_effect=AIServiceError('Gemini daily quota reached. Use Analyze with system model.',429,'AI_DAILY_QUOTA')
+    monkeypatch.setattr(api,'get_schema_resolver',lambda engine:resolver)
+    response=client.post('/api/v1/upload/analyze',data={'tenant_id':tenant,'engine':'system'},files={'files':('legacy.csv',RAW)})
+    assert response.status_code==429,response.text
+    assert response.json()['code']=='AI_DAILY_QUOTA'
+    assert 'daily quota' in response.json()['detail']
+    assert run(get_analysis_repo().latest(tenant)) is None
+
+
+def test_scoring_provider_quota_keeps_pending_session(client_tenant,monkeypatch):
+    from churn_platform.domain.ai_errors import AIServiceError
+    from churn_platform.presentation.api.v1 import upload as api
+    from churn_platform.infrastructure.persistence.redis_repos import PendingUploadRepository
+    client,tenant=client_tenant
+    review=upload(client,tenant)
+    core=AsyncMock()
+    core.analyze.side_effect=AIServiceError('Gemini daily quota reached.',429,'AI_DAILY_QUOTA')
+    monkeypatch.setattr(api,'get_sector_core',lambda *args:core)
+    response=client.post('/api/v1/upload/confirm-mapping',json=confirmation(tenant,review))
+    assert response.status_code==429,response.text
+    assert run(PendingUploadRepository().get(tenant,review['upload_session_id'])) is not None
+    assert run(get_analysis_repo().latest(tenant)) is None

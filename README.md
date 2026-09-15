@@ -379,3 +379,10 @@ original names. Corrections require review, and confirmed aliases are never
 silently changed. The review dialog identifies and blocks duplicate output names
 before submission. If every scoring batch fails, the previous analysis and pending
 review upload are retained for retry instead of saving empty results.
+
+
+Provider quota failures return an actionable HTTP 429 (`AI_DAILY_QUOTA` or
+`AI_RATE_LIMIT`) during both schema discovery and scoring. Provider outages and
+credential problems return HTTP 503. Gemini requests are not immediately retried
+by the SDK: a daily quota does not recover through rapid retries. Existing
+analyses and pending confirmations are preserved after provider failures.

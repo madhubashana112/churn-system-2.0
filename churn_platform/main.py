@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from churn_platform.domain.ai_errors import AIServiceError
 from churn_platform.domain.models.sector import (
     SECTOR_FINTECH,
     SECTOR_SAAS,
@@ -40,6 +41,11 @@ SECTOR_TEMPLATES: Dict[str, str] = {
 }
 
 app = FastAPI(title="Domain-Adaptive Churn Prediction API")
+
+@app.exception_handler(AIServiceError)
+async def ai_service_error(request: Request, exc: AIServiceError):
+    return JSONResponse(status_code=exc.status_code, content={"detail": str(exc), "code": exc.code})
+
 
 app.mount(
     "/static",
