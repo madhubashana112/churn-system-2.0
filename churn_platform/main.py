@@ -169,7 +169,7 @@ async def welcome_page(request: Request):
 @app.get("/signup", response_class=HTMLResponse)
 async def account_page(request: Request):
     if not store.configuration_error and await auth.session_user(request):
-        return RedirectResponse("/dashboard", status_code=303)
+        return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request=request, name="auth.html", context={
         "signup": request.url.path == "/signup", "storage_error": store.configuration_error})
 

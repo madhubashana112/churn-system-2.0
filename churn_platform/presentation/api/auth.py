@@ -88,7 +88,7 @@ async def start_session(request, response, user):
     response.set_cookie(COOKIE, token, max_age=SESSION_SECONDS, httponly=True,
                         secure=request.url.scheme == "https" or os.getenv("COOKIE_SECURE") == "true",
                         samesite="strict", path="/")
-    return {"user": public, "redirect": "/dashboard"}
+    return {"user": public, "redirect": "/"}
 
 
 async def throttle(request, email):

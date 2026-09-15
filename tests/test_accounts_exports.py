@@ -129,3 +129,21 @@ def test_auth_pages_and_shared_controls(isolated_store):
     assert 'data-theme-toggle' in page.text and 'data-logout' in page.text
     assert 'data-export="csv"' in page.text and 'data-export="xlsx"' in page.text
     assert page.headers["cache-control"] == "no-store"
+
+
+def test_login_always_lands_on_tenant_registration_with_existing_workspace(isolated_store):
+    client = TestClient(app)
+    credentials, created = signup(client)
+    assert created.json()["redirect"] == "/"
+    tenant = workspace(client)
+    client.post("/api/auth/logout")
+    logged_in = client.post("/api/auth/login", json=credentials)
+    assert logged_in.status_code == 200
+    assert logged_in.json()["redirect"] == "/"
+    landing = client.get(logged_in.json()["redirect"], follow_redirects=False)
+    assert landing.status_code == 200
+    assert "Register your tenant" in landing.text
+    for path in ("/login", "/signup"):
+        assert client.get(path, follow_redirects=False).headers["location"] == "/"
+    # Existing workspaces remain accessible through an explicit navigation.
+    assert client.get(f"/dashboard?tenant_id={tenant}").status_code == 200
