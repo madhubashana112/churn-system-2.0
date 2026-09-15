@@ -825,6 +825,33 @@
             STATUS: 'Status', EVENT_TYPE: 'Event type', TEXT: 'Text / feedback', ATTRIBUTE: 'Attribute (keep original name)',
             NOISE_IGNORE: 'Ignore / Drop Column', CUSTOM: 'Custom / Add New Name' };
         const element = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
+        const validateMappings = () => {
+            const names = new Map();
+            for (const control of controls) {
+                control.row.classList.remove('mapping-conflict');
+                control.select.removeAttribute('aria-invalid');
+                const role = control.select.value;
+                if (!role || role === 'NOISE_IGNORE') continue;
+                const target = role === 'CUSTOM' ? control.custom.value.trim()
+                    : (review.canonical_names || {})[role] || control.source_column;
+                if (!target) continue;
+                const key = JSON.stringify([control.file_name, target]);
+                if (!names.has(key)) names.set(key, {target, entries: []});
+                names.get(key).entries.push(control);
+            }
+            const conflicts = [];
+            for (const {target, entries} of names.values()) {
+                if (entries.length < 2) continue;
+                for (const entry of entries) {
+                    entry.row.classList.add('mapping-conflict');
+                    entry.select.setAttribute('aria-invalid', 'true');
+                }
+                conflicts.push(`${entries[0].file_name}: ${entries.map(c => c.source_column).join(', ')} all map to "${target}". Keep one in this role; choose Attribute or distinct custom names for the others.`);
+            }
+            error.textContent = conflicts.join(' ');
+            confirm.disabled = submitting || conflicts.length > 0;
+            return conflicts.length === 0;
+        };
         for (const table of review.schema_mapping.tables) {
             const section = element('section'); section.className = 'schema-review__table';
             section.appendChild(element('h3', table.file_name));
@@ -864,9 +891,10 @@
                 custom.placeholder = 'e.g. Priority SLA Tier'; custom.value = column.custom_label || '';
                 custom.setAttribute('aria-label', `Custom name for ${column.source_column} in ${table.file_name}`);
                 const syncCustom = () => { custom.hidden = select.value !== 'CUSTOM'; custom.required = !custom.hidden; };
-                select.addEventListener('change', syncCustom); syncCustom();
+                select.addEventListener('change', () => { syncCustom(); validateMappings(); });
+                custom.addEventListener('input', validateMappings); syncCustom();
                 cell.append(select, custom); row.appendChild(cell); body.appendChild(row);
-                controls.push({file_name: table.file_name, source_column: column.source_column, select, custom});
+                controls.push({file_name: table.file_name, source_column: column.source_column, select, custom, row});
             }
             grid.appendChild(body); scroll.appendChild(grid); section.appendChild(scroll); container.appendChild(section);
         }
@@ -874,7 +902,7 @@
         dialog.oncancel = (event) => { if (submitting) event.preventDefault(); };
         form.onsubmit = async (event) => {
             event.preventDefault();
-            if (submitting || !form.reportValidity()) return;
+            if (submitting || !validateMappings() || !form.reportValidity()) return;
             const mappings = controls.map(c => ({file_name: c.file_name, source_column: c.source_column,
                 canonical_role: c.select.value, custom_label: c.select.value === 'CUSTOM' ? c.custom.value.trim() : null}));
             submitting = true; confirm.disabled = true; cancel.disabled = true;
@@ -895,6 +923,7 @@
                 confirm.textContent = 'Confirm & Run Analysis';
             }
         };
+        validateMappings();
         dialog.showModal();
     }
 

@@ -32,3 +32,13 @@ transaction tables. Distinguish customer IDs from transaction/event IDs. Preserv
 all distinct attributes; do not map two columns to the same canonical output name.
 Human-confirmed aliases supplied as context are authoritative; infer only unmapped columns.
 """
+
+SCHEMA_RESOLVER_SYSTEM_PROMPT += """
+Customer-level snapshots with one row per customer and pre-aggregated measures
+(monthly charges, wallet balance, average transaction value, failure counts,
+network quality) are DIMENSION tables, not transaction/event logs. Keep their
+separate metrics as ATTRIBUTE with their original descriptive names. A numeric
+or currency field is not automatically the primary TRANSACTION_AMOUNT. Reuse
+ATTRIBUTE for distinct measures rather than assigning a single-output canonical
+role to several columns. Never discard a useful measure to avoid a name conflict.
+"""

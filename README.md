@@ -370,3 +370,12 @@ Google's compatibility API: https://ai.google.dev/gemini-api/docs/openai
 Gemini uses batches of 25 customers and low reasoning effort for interactive
 latency. The Vercel function allows up to 300 seconds; very large uploads or
 provider throttling can still exceed that limit.
+
+
+Repeated non-key roles in schema proposals are repaired without dropping metrics.
+Snapshot metrics keep their original names as attributes; event/transaction
+records retain one primary canonical metric and keep additional metrics under
+original names. Corrections require review, and confirmed aliases are never
+silently changed. The review dialog identifies and blocks duplicate output names
+before submission. If every scoring batch fails, the previous analysis and pending
+review upload are retained for retry instead of saving empty results.

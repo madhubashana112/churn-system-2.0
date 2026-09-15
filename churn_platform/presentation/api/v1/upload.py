@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from churn_platform.application.dtos.analysis_response_dto import (
     AnalysisResponse,
 )
-from churn_platform.application.use_cases.complete_upload_analysis import CompleteUploadAnalysisUseCase
+from churn_platform.application.use_cases.complete_upload_analysis import CompleteUploadAnalysisUseCase, AnalysisUnavailable
 from churn_platform.application.use_cases.review_upload_schema import ReviewUploadSchemaUseCase
 from churn_platform.application.use_cases.confirm_schema_mapping import ConfirmSchemaMappingUseCase, ReviewSessionMissing, ReviewSessionBusy
 from churn_platform.application.dtos.schema_review_dto import SchemaReviewResponse, ConfirmSchemaRequest
@@ -103,8 +103,11 @@ async def complete_analysis(tenant, engine, schema, ingested, originals):
     use_case = CompleteUploadAnalysisUseCase(
         get_feature_synthesizer(), get_feature_enricher(), get_analysis_use_case(engine),
         get_analysis_repo(), get_settings().max_entities, is_offline_engine(engine))
-    return await use_case.execute(tenant, schema, ingested.dataframes, originals,
-                                 get_sector_core(tenant.sector, engine))
+    try:
+        return await use_case.execute(tenant, schema, ingested.dataframes, originals,
+                                     get_sector_core(tenant.sector, engine))
+    except AnalysisUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @router.post("/confirm-mapping", response_model=AnalysisResponse)

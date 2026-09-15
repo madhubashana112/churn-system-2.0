@@ -118,9 +118,14 @@ class SchemaMapping(BaseModel):
                 reasons.append(f"{table.file_name}: select exactly one timestamp column")
             if table.role == ROLE_TRANSACTIONAL and "TRANSACTION_AMOUNT" in critical and "TRANSACTION_AMOUNT" not in roles:
                 reasons.append(f"{table.file_name}: select a transaction amount column")
-            targets = [c.target_name for c in table.columns if c.canonical_role != "NOISE_IGNORE"]
-            if len(targets) != len(set(targets)):
-                reasons.append(f"{table.file_name}: mapped names must be unique")
+            targets = {}
+            for column in table.columns:
+                if column.canonical_role != "NOISE_IGNORE":
+                    targets.setdefault(column.target_name, []).append(column.source_column)
+            for target, sources in targets.items():
+                if len(sources) > 1:
+                    reasons.append(f"{table.file_name}: {', '.join(sources)} all map to '{target}'. "
+                                   "Keep only one in this role; set the others to Attribute or give them unique custom names.")
             for column in table.columns:
                 if column.status == REQUIRES_HUMAN_REVIEW:
                     reasons.append(f"{table.file_name}: confirm {column.source_column}")

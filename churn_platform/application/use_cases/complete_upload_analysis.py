@@ -4,6 +4,10 @@ from churn_platform.application.use_cases.synthesize_features import SynthesizeF
 from churn_platform.domain.models.analysis_run import AnalysisRun, EntityOutcome
 
 
+class AnalysisUnavailable(RuntimeError):
+    """No submitted customer could be scored; leave the previous run intact."""
+
+
 class CompleteUploadAnalysisUseCase:
     def __init__(self, synthesizer, enricher, analysis, repository, cap, offline):
         self.synthesizer, self.enricher = synthesizer, enricher
@@ -27,6 +31,9 @@ class CompleteUploadAnalysisUseCase:
             features = features[:cap]
 
         results = await self.analysis.execute(core, features)
+        if features and not results:
+            raise AnalysisUnavailable("No customers could be scored. The analysis service may be busy or rate-limited. "
+                                      "Please retry later; your previous results have been kept.")
         if len(results) < len(features):
             warnings.append(
                 f"{len(features) - len(results)} of the {len(features)} submitted entities "

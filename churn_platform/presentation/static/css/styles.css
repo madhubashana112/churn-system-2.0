@@ -936,3 +936,6 @@ body {
 .schema-review input { margin-top: 8px; width: 100%; }
 .schema-review__footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; }
 #schema-review-error { color: var(--critical); margin-top: 16px; }
+
+.schema-review .mapping-conflict { outline: 2px solid var(--critical); outline-offset: -2px; }
+.schema-review .mapping-conflict select { border-color: var(--critical); }

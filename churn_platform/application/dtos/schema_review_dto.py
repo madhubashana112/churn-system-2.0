@@ -1,12 +1,13 @@
 from typing import Literal
 from pydantic import BaseModel, Field
-from churn_platform.domain.models.schema_mapping import SchemaMapping, CANONICAL_ROLES
+from churn_platform.domain.models.schema_mapping import SchemaMapping, CANONICAL_ROLES, CANONICAL_NAMES
 
 class SchemaReviewResponse(BaseModel):
     requires_human_review: Literal[True] = True
     upload_session_id: str
     schema_mapping: SchemaMapping
     canonical_roles: list[str] = Field(default_factory=lambda: [r for r in CANONICAL_ROLES if r != "UNKNOWN"])
+    canonical_names: dict[str, str] = Field(default_factory=lambda: dict(CANONICAL_NAMES))
     expires_in_seconds: int = 3600
 
 class ConfirmedColumn(BaseModel):

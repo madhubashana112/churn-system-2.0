@@ -288,3 +288,53 @@ def test_multi_sheet_custom_mappings_are_scoped(client_tenant):
     assert custom['legacy.xlsx::Support']['Support priority']==['Platinum']
     assert base64.b64decode(stored.original_files[0].content_base64)==raw
     assert submit()['requires_human_review'] is False
+
+
+def test_repeated_snapshot_metrics_keep_original_names_for_review():
+    gateway=AsyncMock()
+    gateway.generate_json.return_value={'tables':[{'file_name':'snapshot.csv','role':'DIMENSION','primary_entity_key':'customer_id',
+        'columns':[{'source_column':name,'canonical_role':role,'confidence':.95} for name,role in
+        [('customer_id','CUSTOMER_ID'),('monthly_charges','TRANSACTION_AMOUNT'),('wallet_balance','TRANSACTION_AMOUNT'),('avg_monthly_txn_val','TRANSACTION_AMOUNT')]]}]}
+    csv='customer_id,monthly_charges,wallet_balance,avg_monthly_txn_val\nc1,40,100,25\n'
+    mapping=run(AISchemaResolver(gateway).resolve({'snapshot.csv':csv}))
+    assert mapping.status=='REQUIRES_HUMAN_REVIEW'
+    assert all(c.canonical_role=='ATTRIBUTE' for c in mapping.tables[0].columns[1:])
+    assert all(c.confidence < .8 for c in mapping.tables[0].columns[1:])
+    features=PandasFeatureSynthesizer().synthesize(mapping,{'snapshot.csv':pd.read_csv(io.StringIO(csv))})[0].features
+    assert features['monthly_charges']==40 and features['wallet_balance']==100 and features['avg_monthly_txn_val']==25
+
+
+def test_repeated_transaction_amount_keeps_one_primary_and_preserves_memory():
+    from churn_platform.infrastructure.parsers.schema_resolver import preserve_repeated_attributes
+    table=TableClassification(file_name='payments.csv',role='TRANSACTIONAL',primary_entity_key='id',columns=[
+        column('payment','TRANSACTION_AMOUNT',.95),column('fee','TRANSACTION_AMOUNT',.99),column('id','CUSTOMER_ID')])
+    preserve_repeated_attributes(table,{'payment'})
+    assert table.columns[0].canonical_role=='TRANSACTION_AMOUNT'
+    assert table.columns[1].canonical_role=='ATTRIBUTE'
+    table.columns[1]=column('fee','TRANSACTION_AMOUNT')
+    preserve_repeated_attributes(table,{'payment','fee'})
+    assert table.columns[1].canonical_role=='TRANSACTION_AMOUNT'  # Never override a human choice.
+
+
+def test_conflict_error_identifies_columns_and_target():
+    value=schema([column('c_uid_v2','CUSTOMER_ID'),column('ts_x','TIMESTAMP'),
+                  column('monthly_charges','TRANSACTION_AMOUNT'),column('wallet_balance','TRANSACTION_AMOUNT')])
+    error=' '.join(value.review_reasons)
+    assert 'monthly_charges, wallet_balance' in error
+    assert "'transaction_amount'" in error
+    assert 'Attribute' in error
+
+
+def test_failed_scoring_keeps_pending_upload_for_retry(client_tenant,monkeypatch):
+    from churn_platform.presentation.api.v1 import upload as api
+    from churn_platform.infrastructure.persistence.redis_repos import PendingUploadRepository
+    client,tenant=client_tenant
+    review=upload(client,tenant)
+    runner=AsyncMock()
+    runner.execute.return_value=[]
+    monkeypatch.setattr(api,'get_analysis_use_case',lambda engine:runner)
+    response=client.post('/api/v1/upload/confirm-mapping',json=confirmation(tenant,review))
+    assert response.status_code==503,response.text
+    assert run(get_analysis_repo().latest(tenant)) is None
+    assert run(PendingUploadRepository().get(tenant,review['upload_session_id'])) is not None
+    assert run(store.get(key_for(tenant,review['upload_session_id'])+':lock')) is None
