@@ -26,7 +26,7 @@ from churn_platform.domain.models.sector import (
 from churn_platform.presentation.api.dependencies import get_tenant_repo
 from churn_platform.presentation.api.v1 import analytics, tenants, upload, exports
 from churn_platform.presentation.api import auth
-from churn_platform.infrastructure.repositories.state_store import store
+from churn_platform.infrastructure.repositories.state_store import store, StorageUnavailable
 
 PRESENTATION_DIR = Path(__file__).resolve().parent / "presentation"
 
@@ -157,9 +157,18 @@ async def account_security(request: Request, call_next):
 @app.get("/login", response_class=HTMLResponse)
 @app.get("/signup", response_class=HTMLResponse)
 async def account_page(request: Request):
-    if await auth.session_user(request):
+    if not store.configuration_error and await auth.session_user(request):
         return RedirectResponse("/dashboard", status_code=303)
-    return templates.TemplateResponse(request=request, name="auth.html", context={"signup": request.url.path == "/signup"})
+    return templates.TemplateResponse(request=request, name="auth.html", context={
+        "signup": request.url.path == "/signup", "storage_error": store.configuration_error})
+
+
+@app.exception_handler(StorageUnavailable)
+async def storage_unavailable(request: Request, exc: StorageUnavailable):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": str(exc)}, status_code=503, headers={"Retry-After": "60"})
+    return templates.TemplateResponse(request=request, name="auth.html", status_code=503,
+        context={"signup": False, "storage_error": str(exc)}, headers={"Retry-After": "60"})
 
 
 if __name__ == "__main__":

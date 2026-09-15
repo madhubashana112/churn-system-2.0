@@ -17,6 +17,8 @@ os.environ["CHURN_DB_PATH"] = str(Path(_test_state.name) / "state.sqlite3")
 os.environ.pop("UPSTASH_REDIS_REST_URL", None)
 os.environ.pop("UPSTASH_REDIS_REST_TOKEN", None)
 os.environ.pop("VERCEL", None)
+os.environ.pop("KV_REST_API_URL", None)
+os.environ.pop("KV_REST_API_TOKEN", None)
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd

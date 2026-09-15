@@ -7,18 +7,30 @@ import time
 from pathlib import Path
 
 
+class StorageUnavailable(RuntimeError):
+    """Account storage is not configured; never fall back to ephemeral accounts."""
+
+
 class StateStore:
     def __init__(self):
         self.redis = None
-        if os.getenv("UPSTASH_REDIS_REST_URL"):
+        self.configuration_error = None
+        # Vercel Marketplace uses KV_REST_API_*; standalone Upstash uses
+        # UPSTASH_REDIS_REST_*. Use one complete credential pair, never mix them.
+        url, token = os.getenv("UPSTASH_REDIS_REST_URL"), os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        if not url and not token:
+            url, token = os.getenv("KV_REST_API_URL"), os.getenv("KV_REST_API_TOKEN")
+        if url and token:
             from upstash_redis.asyncio import Redis
-            self.redis = Redis.from_env()
-        elif os.getenv("VERCEL"):
-            raise RuntimeError("Configure Upstash Redis for persistent accounts on Vercel.")
+            self.redis = Redis(url=url, token=token)
+        elif url or token or os.getenv("VERCEL"):
+            self.configuration_error = "Account storage is not configured. Please contact the site owner."
         self.path = Path(os.getenv("CHURN_DB_PATH", str(Path(__file__).resolve().parents[3] / ".local" / "churn.sqlite3")))
 
     @contextmanager
     def connect(self):
+        if self.configuration_error:
+            raise StorageUnavailable(self.configuration_error)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(self.path, timeout=15)
         db.execute("CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires REAL)")

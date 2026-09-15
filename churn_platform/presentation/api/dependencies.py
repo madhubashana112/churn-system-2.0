@@ -95,18 +95,11 @@ def _build_repos():
     memory is not a store there; the presence of the Upstash REST credentials
     is what tells us we are in that world.
     """
-    if os.environ.get("UPSTASH_REDIS_REST_URL"):
-        from upstash_redis.asyncio import Redis
-
-        from churn_platform.infrastructure.repositories.redis_repos import (
-            RedisAnalysisRepository,
-            RedisTenantRepository,
-        )
-
-        client = Redis.from_env()
+    from churn_platform.infrastructure.repositories.state_store import store, SQLiteTenantRepository, SQLiteAnalysisRepository
+    if store.redis is not None:
+        from churn_platform.infrastructure.repositories.redis_repos import RedisTenantRepository, RedisAnalysisRepository
         logger.info("State store: Upstash Redis")
-        return RedisTenantRepository(client), RedisAnalysisRepository(client)
-    from churn_platform.infrastructure.repositories.state_store import SQLiteTenantRepository, SQLiteAnalysisRepository
+        return RedisTenantRepository(store.redis), RedisAnalysisRepository(store.redis)
     return SQLiteTenantRepository(), SQLiteAnalysisRepository()
 
 

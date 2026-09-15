@@ -22,6 +22,7 @@
 <p class="page-head__eyebrow">YOUR RETENTION WORKSPACE</p>
 <h1 class="onboard__title">{{ 'Create your account' if signup else 'Welcome back' }}</h1>
 <p class="onboard__subtitle">{{ 'Start with your account. Set up your company next.' if signup else 'Log in to continue to your customer insights.' }}</p>
+{% if storage_error %}<div class="form-error" role="alert">Account services are being configured. Please try again shortly.</div>{% endif %}
 <form id="auth-form" data-mode="{{ 'signup' if signup else 'login' }}">
 <div id="auth-error" class="form-error" role="alert" hidden></div>
 {% if signup %}<div class="field"><label class="field__label" for="name">Full name</label><input class="input" id="name" name="name" autocomplete="name" maxlength="100" required></div>{% endif %}
@@ -29,7 +30,7 @@
 <div class="field"><label class="field__label" for="password">Password</label><input class="input" id="password" name="password" type="password" autocomplete="{{ 'new-password' if signup else 'current-password' }}" minlength="{{ 10 if signup else 1 }}" maxlength="128" required>{% if signup %}<p class="field-hint">Use at least 10 characters.</p>{% endif %}</div>
 {% if signup %}<div class="field"><label class="field__label" for="confirm-password">Confirm password</label><input class="input" id="confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></div>{% endif %}
 <label class="password-toggle"><input id="show-password" type="checkbox"> Show password</label>
-<button type="submit" class="btn btn--primary btn--block" id="auth-submit">{{ 'Create account' if signup else 'Log in' }}</button>
+<button type="submit" class="btn btn--primary btn--block" id="auth-submit" {% if storage_error %}disabled{% endif %}>{{ 'Create account' if signup else 'Log in' }}</button>
 </form>
 <p class="auth-switch">{% if signup %}Already have an account? <a href="/login">Log in</a>{% else %}New to Churn AI? <a href="/signup">Create an account</a>{% endif %}</p>
 </div>

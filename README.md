@@ -254,7 +254,9 @@ exists, export returns 404. Empty filters produce a header-only file.
 Local state lives in `.local/churn.sqlite3` (ignored by Git). Back up this file to retain
 accounts and analyses. Set `CHURN_DB_PATH` as a process environment variable to use another
 persistent path. On Vercel, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`;
-startup refuses ephemeral serverless storage without Redis. Accounts/ownership do not expire;
+Vercel Marketplace's `KV_REST_API_URL` and `KV_REST_API_TOKEN` names are also supported.
+Without a complete credential pair the account pages remain available with a setup message,
+and account writes return 503 instead of crashing the entire function. Accounts/ownership do not expire;
 Redis tenant/analysis data retains the existing seven-day TTL. Use HTTPS when hosting, and set
 `COOKIE_SECURE=true` as a process environment variable when behind an HTTPS reverse proxy.
 Do not commit databases, user uploads, sessions or environment secrets.
@@ -265,7 +267,7 @@ Do not commit databases, user uploads, sessions or environment secrets.
 python -m pytest -q
 ```
 
-345 tests, none of which touch the network — the live-gateway tests mount a stub
+348 tests, none of which touch the network — the live-gateway tests mount a stub
 chat-completions app into the client's own transport, so retries and reply parsing are
 exercised offline, and `tests/conftest.py` stops `Settings` reading `api_key.env` before any
 test module is imported, so a real key on disk cannot turn the suite into metered live calls.
