@@ -41,6 +41,7 @@ from churn_platform.domain.models.schema_mapping import (
     TableClassification,
 )
 from churn_platform.infrastructure.parsers.text_features import KeywordSentimentScorer
+from churn_platform.infrastructure.parsers.metric_context import currency_number, metric_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,7 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
 
             self._apply_dimension(table, df, features)
             self._apply_custom(table, df, features)
+            self._apply_attribute_context(table, df, features)
             self._apply_row_count(prefix, table, df, features)
             # A dimension table's date is a signup/creation date, not activity,
             # so deriving a velocity from it would be noise.
@@ -260,6 +262,15 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
             if len(set(renames.values())) != len(renames):
                 raise ValueError("Mapped column names must be unique within each table")
             frames[table.file_name] = df.drop(columns=drops, errors="ignore").rename(columns=renames)
+            for column in kept:
+                if column.canonical_role == "TRANSACTION_AMOUNT":
+                    source = frames[table.file_name][column.target_name]
+                    numbers = source.map(currency_number)
+                    invalid = source.notna() & source.astype(str).str.strip().ne("") & numbers.isna()
+                    if invalid.any():
+                        raise ValueError(f"{table.file_name}: {column.source_column} contains amounts that could not be parsed. "
+                                         "Use numeric amounts such as 49.99 or $1,249.99, or select Attribute to retain the original values.")
+                    frames[table.file_name][column.target_name] = numbers
             table.primary_entity_key = renames.get(table.primary_entity_key, table.primary_entity_key)
             table.timestamp_column = renames.get(table.timestamp_column, table.timestamp_column)
             for column in kept:
@@ -286,6 +297,22 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
                 else:
                     summary = list(dict.fromkeys(series.astype(str)))[:3]
                 payload.setdefault("custom_metrics", {}).setdefault(table.file_name, {})[column.custom_label] = summary
+                payload.setdefault("custom_metric_evidence", {}).setdefault(table.file_name, {})[column.custom_label] = metric_evidence(series)
+
+    def _apply_attribute_context(self, table, df, features):
+        """Keep supporting signals on event tables available beside custom metrics."""
+        key = table.primary_entity_key
+        if key not in df.columns:
+            return
+        for column in table.columns:
+            if column.canonical_role not in {"ATTRIBUTE", "SUBSCRIPTION_PLAN", "USAGE_ACTIVITY"}:
+                continue
+            if column.source_column not in df.columns:
+                continue
+            for entity, group in df.groupby(key):
+                payload = features.get(str(entity))
+                if payload is not None:
+                    payload.setdefault("additional_attributes", {}).setdefault(table.file_name, {})[column.source_column] = metric_evidence(group[column.source_column])
 
     # -- preparation ---------------------------------------------------------
 
@@ -350,7 +377,7 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
             return
         custom_names = {c.custom_label for c in table.columns if c.canonical_role == "CUSTOM"}
         attribute_columns = [c for c in df.columns if c != key and c != table.timestamp_column
-                             and c not in custom_names and c != "custom_metrics"]
+                             and c not in custom_names and c not in {"custom_metrics", "custom_metric_evidence", "additional_attributes"}]
         for row in df[[key, *attribute_columns]].to_dict("records"):
             payload = features.get(str(row[key]))
             if payload is None:

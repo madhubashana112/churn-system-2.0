@@ -386,3 +386,31 @@ Provider quota failures return an actionable HTTP 429 (`AI_DAILY_QUOTA` or
 credential problems return HTTP 503. Gemini requests are not immediately retried
 by the SDK: a daily quota does not recover through rapid retries. Existing
 analyses and pending confirmations are preserved after provider failures.
+
+
+### Human clarification and adaptive custom metrics
+
+The mapping dialog displays every original column, its suggested role and real
+sample values. Select **Add Custom Name** to replace an incorrect suggestion,
+even one with high confidence. **Review or change column meanings before analysis**
+opens this dialog for otherwise automatic or remembered mappings too.
+
+- `tx_amt_net_99` → Transaction Amount parses `$49.99` / `$199.00` into numeric
+  amounts for aggregation. Unparseable nonempty values produce an actionable
+  validation error, not a silently fabricated zero. Currency conversion is not performed.
+- `sys_stat_code` → Ignore / Drop Column removes it from synthesized features.
+- `usr_rt_val_3` → **Priority SLA Tier** preserves `Tier 1` / `Tier 3` under that
+  exact custom label. Subscription Plan and Usage Activity are standard roles.
+- `tw_pwr_drp` → **Cell Tower Signal Strength** preserves unit-bearing values such
+  as `-110dBm`. `custom_metric_evidence` also includes count, range and mean for
+  consistently numeric values with the same unit; extrema are not lost to the
+  three-sample display limit. Mixed units are kept without guessing conversions.
+- Supporting event-table attributes (latency, dropped-call counts, etc.) remain
+  in `additional_attributes`, so the AI can reason about them alongside custom metrics.
+
+The configured AI is instructed to use custom names and observed values when
+relevant to its diagnosis, without inventing causal relationships, locations or
+trends. This is contextual model reasoning, not retraining or a guaranteed score
+change. The system engine remains deterministic. Confirmed meanings are saved in
+Redis per tenant and logical file/sheet name; repeated uploads reuse them without
+another schema inference call. Original files are unchanged.

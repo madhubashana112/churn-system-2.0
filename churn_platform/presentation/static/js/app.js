@@ -775,6 +775,7 @@
         const form = new FormData();
         form.append('tenant_id', tenantId);
         form.append('engine', engine);
+        form.append('review_mapping', byId('review-mapping').checked ? 'true' : 'false');
         for (const file of selectedFiles) form.append('files', file);
 
         try {
@@ -821,9 +822,9 @@
         let submitting = false;
         container.replaceChildren();
         error.textContent = review.schema_mapping.review_reasons.join('; ');
-        const labels = { CUSTOMER_ID: 'Customer ID', TIMESTAMP: 'Timestamp', TRANSACTION_AMOUNT: 'Transaction amount',
+        const labels = { UNKNOWN: 'Unknown', CUSTOMER_ID: 'Customer ID', TIMESTAMP: 'Timestamp', TRANSACTION_AMOUNT: 'Transaction amount',
             STATUS: 'Status', EVENT_TYPE: 'Event type', TEXT: 'Text / feedback', ATTRIBUTE: 'Attribute (keep original name)',
-            NOISE_IGNORE: 'Ignore / Drop Column', CUSTOM: 'Custom / Add New Name' };
+            NOISE_IGNORE: 'Ignore / Drop Column', CUSTOM: 'Add Custom Name', SUBSCRIPTION_PLAN: 'Subscription Plan', USAGE_ACTIVITY: 'Usage Activity' };
         const element = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
         const validateMappings = () => {
             const names = new Map();
@@ -872,6 +873,7 @@
                 const row = element('tr');
                 if (column.confidence < .8 || column.status === 'REQUIRES_HUMAN_REVIEW') row.className = 'needs-review';
                 const source = element('td', column.source_column);
+                source.appendChild(element('small', `Suggested: ${labels[column.canonical_role] || column.canonical_role}`));
                 source.appendChild(element('small', column.reasoning || 'Please select a role.'));
                 row.appendChild(source);
                 const sample = element('td');

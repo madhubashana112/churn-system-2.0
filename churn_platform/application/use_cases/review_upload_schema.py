@@ -9,11 +9,11 @@ class ReviewUploadSchemaUseCase:
     def __init__(self, resolver: ISchemaResolver, memory: ITenantSchemaMemoryRepository, pending: IPendingUploadRepository):
         self.resolver, self.memory, self.pending = resolver, memory, pending
 
-    async def execute(self, tenant, files, samples, engine):
+    async def execute(self, tenant, files, samples, engine, force_review=False):
         remembered = await self.memory.get(tenant.tenant_id, list(samples))
         schema = await self.resolver.resolve(samples, remembered=remembered)
         schema.assess(tenant.sector)
-        if schema.status != REQUIRES_HUMAN_REVIEW:
+        if schema.status != REQUIRES_HUMAN_REVIEW and not force_review:
             return schema
         session = PendingUploadSession(upload_session_id=str(uuid4()), tenant_id=tenant.tenant_id,
             sector=tenant.sector, engine=engine, files=files, schema_mapping=schema)

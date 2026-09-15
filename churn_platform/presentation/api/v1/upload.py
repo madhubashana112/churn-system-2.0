@@ -45,6 +45,7 @@ async def upload_and_analyze(
     tenant_id: str = Form(...),
     files: List[UploadFile] = File(...),
     engine: str = Form("auto"),
+    review_mapping: bool = Form(False),
 ) -> AnalysisResponse | SchemaReviewResponse:
     try:
         chosen_engine = resolve_engine(engine)
@@ -88,7 +89,7 @@ async def upload_and_analyze(
     memory, pending = review_repositories()
     schema = await ReviewUploadSchemaUseCase(
         get_schema_resolver(chosen_engine), memory, pending
-    ).execute(tenant, originals, ingested.samples, chosen_engine)
+    ).execute(tenant, originals, ingested.samples, chosen_engine, force_review=review_mapping)
     if isinstance(schema, SchemaReviewResponse):
         return schema
 
@@ -106,6 +107,8 @@ async def complete_analysis(tenant, engine, schema, ingested, originals):
     try:
         return await use_case.execute(tenant, schema, ingested.dataframes, originals,
                                      get_sector_core(tenant.sector, engine))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     except AnalysisUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
 

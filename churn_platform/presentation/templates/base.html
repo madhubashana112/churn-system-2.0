@@ -101,6 +101,9 @@
                     <span class="spinner"></span> <span id="upload-progress-text">Working&hellip;</span>
                 </span>
             </div>
+            <label class="field-hint" style="display:block;margin-top:12px">
+                <input type="checkbox" id="review-mapping"> Review or change column meanings before analysis
+            </label>
             <p id="engine-note" class="text-sm text-gray-500 mt-2"></p><p class="field-hint">Maximum 4 MB per analysis. Original files are saved with the analysis for download.</p>
         </div>
     </section>
@@ -234,7 +237,7 @@
     <form id="schema-review-form">
         <header class="schema-review__header">
             <h2 id="schema-review-title">Confirm Column Mapping</h2>
-            <p id="schema-review-help">Review the suggested roles and sample values before analysis. Amber columns need attention. Your confirmed choices are remembered for this workspace and file name. This upload expires after one hour.</p>
+            <p id="schema-review-help">Review every suggested role against the sample values. You can override any suggestion, including high-confidence ones. Amber columns need attention. Your confirmed choices are remembered for this workspace and file name. Custom names become metric names in the AI analysis. This upload expires after one hour.</p>
             <p class="field-hint">Analysis reference date: 1 June 2025.</p>
         </header>
         <div id="schema-review-columns"></div>

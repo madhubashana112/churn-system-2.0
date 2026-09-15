@@ -367,3 +367,98 @@ def test_scoring_provider_quota_keeps_pending_session(client_tenant,monkeypatch)
     assert response.status_code==429,response.text
     assert run(PendingUploadRepository().get(tenant,review['upload_session_id'])) is not None
     assert run(get_analysis_repo().latest(tenant)) is None
+
+
+@pytest.mark.parametrize('raw,expected',[('$49.99',49.99),('$199.00',199),('$1,249.99',1249.99),('LKR 250.00',250),('(£15.50)',-15.5),(1e20,1e20)])
+def test_canonical_amount_parses_currency(raw,expected):
+    from churn_platform.infrastructure.parsers.metric_context import currency_number
+    assert currency_number(raw)==expected
+
+
+def test_custom_telemetry_keeps_extreme_values_outside_three_samples():
+    from churn_platform.infrastructure.parsers.metric_context import metric_evidence
+    result=metric_evidence(pd.Series(['-85dBm','-90dBm','-95dBm','-110dBm']))
+    assert result['sample_values']==['-85dBm','-90dBm','-95dBm']
+    assert result['numeric_summary']['minimum_observation']=='-110dBm'
+    assert result['numeric_summary']['unit']=='dBm'
+    assert result['observation_count']==4
+    assert 'numeric_summary' not in metric_evidence(pd.Series(['12ms','3s']))
+
+
+def test_review_option_can_override_confident_and_remembered_mappings(client_tenant):
+    client,tenant=client_tenant
+    raw=b'customer_id,plan_tier\nu1,Tier 1\n'
+    def submit(review):
+        return client.post('/api/v1/upload/analyze',data={'tenant_id':tenant,'engine':'system','review_mapping':str(review).lower()},files={'files':('users.csv',raw)})
+    review=submit(True).json()
+    assert review['requires_human_review']
+    assert all(c['confidence']>=.8 for c in review['schema_mapping']['tables'][0]['columns'])
+    response=client.post('/api/v1/upload/confirm-mapping',json={'tenant_id':tenant,'upload_session_id':review['upload_session_id'],
+        'mappings':[{'file_name':'users.csv','source_column':'customer_id','canonical_role':'CUSTOMER_ID'},
+                    {'file_name':'users.csv','source_column':'plan_tier','canonical_role':'CUSTOM','custom_label':'Priority SLA Tier'}]})
+    assert response.status_code==200,response.text
+    assert submit(False).json()['requires_human_review'] is False
+    second=submit(True).json()
+    assert second['requires_human_review']
+    assert second['schema_mapping']['tables'][0]['columns'][1]['custom_label']=='Priority SLA Tier'
+
+
+@pytest.mark.parametrize('sector',['SaaS','Telecom'])
+def test_user_scenarios_resume_with_semantic_names_and_supporting_evidence(client_tenant,monkeypatch,sector):
+    from churn_platform.presentation.api import dependencies
+    from churn_platform.config import Settings
+    from churn_platform.infrastructure.ai.cores.telecom_core import TelecomCore
+    client,_=client_tenant
+    tenant=client.post('/api/v1/tenants/',json={'name':'Semantic scenario','sector':sector}).json()['tenant_id']
+    registry=dependencies.build_engine_registry(Settings(_env_file=None,gemini_api_key='test-key'))
+    gateway=AsyncMock()
+    calls=[]
+    if sector=='SaaS':
+        raw=b'customer_id,timestamp,tx_amt_net_99,sys_stat_code,usr_rt_val_3,latency_ms\nu1,2025-05-30,$49.99,x8,Tier 1,300\nu1,2025-05-31,$199.00,y2,Tier 1,350\n'
+        roles={'customer_id':'CUSTOMER_ID','timestamp':'TIMESTAMP','tx_amt_net_99':'UNKNOWN','sys_stat_code':'UNKNOWN','usr_rt_val_3':'SUBSCRIPTION_PLAN','latency_ms':'ATTRIBUTE'}
+        label,source='Priority SLA Tier','usr_rt_val_3'
+        table_role='TRANSACTIONAL'
+    else:
+        raw=b'msisdn,timestamp,call_dur_sec,tw_pwr_drp,dropped_calls_30d\nu1,2025-05-28,45,-85dBm,1\nu1,2025-05-29,30,-90dBm,2\nu1,2025-05-30,20,-95dBm,4\nu1,2025-05-31,10,-110dBm,12\n'
+        roles={'msisdn':'CUSTOMER_ID','timestamp':'TIMESTAMP','call_dur_sec':'USAGE_ACTIVITY','tw_pwr_drp':'UNKNOWN','dropped_calls_30d':'ATTRIBUTE'}
+        label,source='Cell Tower Signal Strength','tw_pwr_drp'
+        table_role='TIME_SERIES_EVENT'
+    async def respond(system_prompt,user_prompt):
+        calls.append((system_prompt,user_prompt))
+        if 'Data Engineer' in system_prompt:
+            return {'tables':[{'file_name':'export.csv','role':table_role,'primary_entity_key':next(iter(roles)),'timestamp_column':'timestamp',
+                'columns':[{'source_column':name,'canonical_role':role,'confidence':.3 if role=='UNKNOWN' else .98} for name,role in roles.items()]}]}
+        return {'predictions':[{'entity_id':'u1','churn_prediction':{'churn_probability':.85,'primary_drivers':[label], 'root_cause':label},
+            'retention_playbook':{'action_type':'REVIEW','action_payload':'Investigate the supplied evidence','channel':'Email'}}]}
+    gateway.generate_json.side_effect=respond
+    registry.gateways['ai']=gateway
+    registry.resolvers['ai']=AISchemaResolver(gateway)
+    registry.cores['ai'][sector.lower()]=SaasCore(gateway) if sector=='SaaS' else TelecomCore(gateway)
+    monkeypatch.setattr(dependencies,'_REGISTRY',registry)
+    def submit():
+        r=client.post('/api/v1/upload/analyze',data={'tenant_id':tenant,'engine':'ai'},files={'files':('export.csv',raw)})
+        assert r.status_code==200,r.text
+        return r.json()
+    review=submit()
+    assert review['requires_human_review']
+    mappings=[]
+    for name,role in roles.items():
+        choice='CUSTOM' if name==source else 'TRANSACTION_AMOUNT' if name=='tx_amt_net_99' else 'NOISE_IGNORE' if name=='sys_stat_code' else role
+        mappings.append({'file_name':'export.csv','source_column':name,'canonical_role':choice,'custom_label':label if choice=='CUSTOM' else None})
+    r=client.post('/api/v1/upload/confirm-mapping',json={'tenant_id':tenant,'upload_session_id':review['upload_session_id'],'mappings':mappings})
+    assert r.status_code==200,r.text
+    prompt=calls[-1][1]
+    assert label in prompt and source not in prompt
+    assert 'sys_stat_code' not in prompt
+    features=json.loads(prompt.split('\n',1)[1])[0]['features']
+    if sector=='SaaS':
+        assert features['export_amount_total']==pytest.approx(248.99)
+        assert features['custom_metrics']['export.csv'][label]==['Tier 1']
+        assert features['additional_attributes']['export.csv']['latency_ms']['numeric_summary']['max']==350
+    else:
+        telemetry=features['custom_metric_evidence']['export.csv'][label]
+        assert telemetry['numeric_summary']['minimum_observation']=='-110dBm'
+        assert features['additional_attributes']['export.csv']['usage_activity']['numeric_summary']['min']==10
+        assert features['additional_attributes']['export.csv']['dropped_calls_30d']['numeric_summary']['max']==12
+    assert submit()['requires_human_review'] is False
+    assert sum('Data Engineer' in system for system,_ in calls)==1
