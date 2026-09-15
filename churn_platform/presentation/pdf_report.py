@@ -10,8 +10,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, PageBreak
 
+from churn_platform.application.use_cases.summarize_analysis import dashboard_charts
+from churn_platform.presentation.pdf_charts import DashboardChart, legend_rows
 
 def analysis_pdf(run, outcomes, tenant_name, tier, search):
     font_dir = Path(reportlab.__file__).parent / "fonts"
@@ -48,6 +50,32 @@ def analysis_pdf(run, outcomes, tenant_name, tier, search):
     story.append(paragraph("Scores indicate risk, not confirmed cancellations. Recommendations should be reviewed before contacting customers.", "muted"))
     if not outcomes:
         story.append(paragraph("No customers match the selected filters.", "heading"))
+    if outcomes:
+        filtered_run = run.model_copy(update={"outcomes": list(outcomes)})
+        charts = dashboard_charts(filtered_run)
+        ordered = ["tier_mix", "probability_histogram"] + [key for key in charts if key not in {"tier_mix", "probability_histogram"}]
+        for key in ordered:
+            chart = charts[key]
+            story += [PageBreak(), paragraph(chart.title, "heading"),
+                      paragraph(chart.subtitle, "muted"),
+                      paragraph(f"Selected population: {len(outcomes)} customers. Same filters as this report.", "muted"),
+                      DashboardChart(chart)]
+            rows = legend_rows(chart)
+            if rows:
+                legend = Table([[paragraph(label), paragraph(value) if value else ""] for label, value, _ in rows], colWidths=[405,100])
+                commands = [("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),12)]
+                for index, (_, _, color) in enumerate(rows):
+                    commands.append(("LINEBEFORE",(0,index),(0,index),5,color))
+                legend.setStyle(TableStyle(commands))
+                story += [Spacer(1,12), legend]
+            if chart.kind == "bar":
+                # Exact values also make charts accessible and printable in grayscale.
+                headers = [paragraph("Category")] + [paragraph(d.label) for d in chart.datasets]
+                rows = [[paragraph(f"{i+1}. {label}")] + [paragraph(f"{d.values[i]:g}" if i < len(d.values) else "0") for d in chart.datasets] for i,label in enumerate(chart.labels)]
+                table = Table([headers]+rows, colWidths=[205]+[300/max(1,len(chart.datasets))]*len(chart.datasets), repeatRows=1)
+                table.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("BACKGROUND",(0,0),(-1,0),colors.HexColor("#ecebff")),("LINEBELOW",(0,0),(-1,-1),.3,colors.HexColor("#e2e5eb"))]))
+                story += [Spacer(1,12),table]
+        story += [PageBreak(), paragraph("Customer details", "heading")]
     for outcome in outcomes:
         p, action = outcome.prediction, outcome.playbook
         story.append(KeepTogether([paragraph(f"{p.entity_id} | {p.risk_tier} | {p.churn_probability:.1%}", "heading"),

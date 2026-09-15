@@ -76,3 +76,30 @@ def test_new_downloads_require_owner_and_oversize_upload_does_not_replace_run(is
     response = client.post('/api/v1/upload/analyze',data={'tenant_id':tenant},files={'files':('large.csv', b'x'*(4*1024*1024+1))})
     assert response.status_code == 413
     assert len(asyncio.run(get_analysis_repo().latest(tenant)).original_files) == 4
+
+
+def test_fintech_pdf_charts_use_filtered_run_without_mutation():
+    from churn_platform.presentation.pdf_report import analysis_pdf
+    from churn_platform.application.use_cases.summarize_analysis import dashboard_charts
+    from churn_platform.domain.models.analysis_run import EntityOutcome
+    from churn_platform.domain.models.schema_mapping import SchemaMapping
+    run = AnalysisRun(tenant_id='chart-test',sector='FinTech',schema_mapping=SchemaMapping(primary_entity_key='id',tables=[]),
+        entities_uploaded=2,entities_analyzed=2,outcomes=[EntityOutcome(
+            prediction={'entity_id':name,'risk_tier':tier,'churn_probability':prob,'dormancy_type':dormancy},
+            playbook={'action_type':'REVIEW','action_payload':'Check evidence','channel':'Email'},
+            features={'balance_drain_ratio':drain,'withdrawal_share_recent':drain})
+            for name,tier,prob,dormancy,drain in [('a','HIGH',.7,'HARD',.8),('b','LOW',.1,'ACTIVE',.1)]])
+    filtered=run.model_copy(update={'outcomes':[run.outcomes[0]]})
+    charts=dashboard_charts(filtered)
+    assert sum(charts['tier_mix'].datasets[0].values)==1
+    assert sum(charts['probability_histogram'].datasets[0].values)==1
+    assert sum(sum(d.values) for d in charts['withdrawal_share'].datasets)==1
+    assert sum(len(d.points) for d in charts['drain_vs_risk'].datasets)==1
+    data=analysis_pdf(run,[run.outcomes[0]],'Chart QA','HIGH','')
+    pages=PdfReader(io.BytesIO(data)).pages
+    text='\n'.join(p.extract_text() for p in pages)
+    for title in ['Dormancy profile','Recent withdrawal share of settled flow','Customers by risk tier','Churn probability distribution','Balance drain against predicted churn']:
+        assert title in text
+    assert 'Selected population: 1 customers' in text
+    assert len(run.outcomes)==2
+    assert any(b' c' in p.get_contents().get_data() for p in pages)  # Vector curves, not a text-only export.

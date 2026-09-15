@@ -727,6 +727,16 @@ _SECTOR_COLUMNS = {
 }
 
 
+def dashboard_charts(run: AnalysisRun) -> Dict[str, ChartSpec]:
+    """Shared chart data for the interactive dashboard and filtered PDF exports."""
+    sector = normalize_sector(run.sector) or SECTOR_SAAS
+    at_risk, healthy = _split(run.outcomes)
+    charts = _SECTOR_BUILDERS[sector][1](run, at_risk, healthy)
+    charts["tier_mix"] = _tier_mix_chart(_tier_slices(run))
+    charts["probability_histogram"] = _probability_histogram(run)
+    return charts
+
+
 class SummarizeAnalysisUseCase:
     """Aggregate a stored run into the payload one sector dashboard renders."""
 
@@ -749,7 +759,7 @@ class SummarizeAnalysisUseCase:
         at_risk, healthy = _split(run.outcomes)
 
         kpis = build_kpis(run, at_risk)
-        charts = build_charts(run, at_risk, healthy)
+        charts = dashboard_charts(run)
 
         total = len(run.outcomes)
         kpis["at_risk"] = KpiCard(
@@ -759,8 +769,6 @@ class SummarizeAnalysisUseCase:
             detail=f"{_pct(_share(len(at_risk), total), 0)} of {total} scored customers are HIGH or CRITICAL",
             tone=_tone_for_share(_share(len(at_risk), total)),
         )
-        charts["tier_mix"] = _tier_mix_chart(_tier_slices(run))
-        charts["probability_histogram"] = _probability_histogram(run)
 
         columns = _SECTOR_COLUMNS[sector]
         ordered = sorted(run.outcomes, key=lambda o: o.prediction.churn_probability, reverse=True)
