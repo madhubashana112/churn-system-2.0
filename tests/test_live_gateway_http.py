@@ -147,7 +147,7 @@ def test_exhausted_retries_surface_as_an_error_rather_than_a_silent_empty_run():
 def test_gemini_json_requests_use_low_reasoning_without_changing_other_hosts():
     async def exercise():
         state = {'fence': False}
-        gateway = QwenGateway(api_key='synthetic-test-key', base_url='https://generativelanguage.googleapis.com/v1', model='gemini-3.6-flash', max_retries=0)
+        gateway = QwenGateway(api_key='synthetic-test-key', base_url='https://generativelanguage.googleapis.com/v1', model='gemini-3.5-flash-lite', max_retries=0)
         await gateway.client.close()
         gateway.client = AsyncOpenAI(api_key='synthetic-test-key', base_url='https://generativelanguage.googleapis.com/v1',
             http_client=httpx.AsyncClient(transport=httpx.ASGITransport(app=stub_host(state))), max_retries=0)
@@ -173,7 +173,7 @@ def test_gemini_errors_are_safe_typed_and_not_retried(status,body,expected_statu
         async def handler(request):
             calls.append(request)
             return httpx.Response(status,json=body)
-        gateway=QwenGateway(api_key='private-test-secret',base_url='https://generativelanguage.googleapis.com/v1beta/openai/',model='gemini-3.6-flash',max_retries=4)
+        gateway=QwenGateway(api_key='private-test-secret',base_url='https://generativelanguage.googleapis.com/v1beta/openai/',model='gemini-3.5-flash-lite',max_retries=4)
         await gateway.client.close()
         gateway.client=AsyncOpenAI(api_key='private-test-secret',base_url='https://generativelanguage.googleapis.com/v1beta/openai/',max_retries=4,
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))

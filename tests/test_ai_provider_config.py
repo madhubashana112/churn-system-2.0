@@ -410,7 +410,7 @@ def test_gemini_key_uses_google_endpoint_and_model():
     assert resolved.api_provider == "gemini"
     assert resolved.api_key == "gemini-test-key"
     assert resolved.resolved_base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
-    assert resolved.resolved_model == "gemini-3.6-flash"
+    assert resolved.resolved_model == "gemini-3.5-flash-lite"
     assert resolved.resolved_batch_size == 25
 
 
@@ -419,5 +419,5 @@ def test_gemini_builds_live_gateway_and_all_sector_cores():
     registry = build_engine_registry(settings(gemini_api_key="gemini-test-key"))
     assert registry.default == "ai"
     assert set(registry.cores["ai"]) == {"saas", "telecom", "fintech"}
-    assert registry.gateways["ai"].model == "gemini-3.6-flash"
+    assert registry.gateways["ai"].model == "gemini-3.5-flash-lite"
     assert str(registry.gateways["ai"].client.base_url).startswith("https://generativelanguage.googleapis.com/")
