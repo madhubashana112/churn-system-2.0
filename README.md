@@ -1,4 +1,4 @@
-# Domain-Adaptive Churn Prediction Platform
+# Churn System 2.0
 
 A multi-tenant churn prediction platform that adapts to three industry verticals — SaaS,
 Telecom/ISP and FinTech/Banking — with automated schema mapping, feature synthesis, risk
@@ -7,9 +7,28 @@ scoring and a sector-specific analytics dashboard per tenant.
 Raw exports go in (CSV, TSV or a multi-sheet `.xlsx` workbook); a resolved schema, a scored
 customer list and a retention playbook per customer come out.
 
+## New in 2.0
+
+- **Login and sign-up:** email/password accounts, salted scrypt password hashes, seven-day
+  HttpOnly sessions, logout revocation, rate limits, and account-owned workspaces.
+- **Exports:** CSV and formatted Excel downloads from the customer table. Exports respect
+  the tier and ID search filters and include every matching row, not just the table's first
+  250. They include scores, drivers, recommendations, evidence and analysis metadata.
+  Spreadsheet formula-like text is escaped; CSV probabilities are fractions (0.8 = 80%).
+- **Dark mode:** toggle on account, onboarding, dashboard and customer pages. Defaults to
+  your operating-system preference and remembers your choice, including chart colors.
+- **Persistence:** accounts, sessions, workspaces and the latest analysis survive local restarts.
+
+Start the app using the setup steps below, open `/signup`, create an account, then register
+one company workspace. Returning users can log in at `/login`; `/dashboard` opens their most
+recently registered workspace. Sample data is available after registration. Existing
+anonymous workspace IDs cannot be claimed by a new account; register a workspace and upload
+again. The original project and Git history are retained from
+[kalana-gr/Churn_Prediction](https://github.com/kalana-gr/Churn_Prediction).
+
 ## How it works
 
-1. **Onboarding** — register a tenant and pick a sector. The sector chooses the retention core
+1. **Onboarding** — sign up or log in, then register a tenant and pick a sector. The sector chooses the retention core
    and the dashboard template; it is stored on the tenant, never taken from the browser.
 2. **Upload** — drop in that sector's exports. The platform discovers the join key and each
    table's role (dimension, event log, transactional, free text) and discards noise columns.
@@ -110,7 +129,7 @@ at-risk KPI or labelling a CRITICAL customer MEDIUM.
 │   │   │                      #   reply normalisation
 │   │   ├── parsers/           #   ingestion, feature synthesis, sentiment, enrichers,
 │   │   │                      #   bundled sample data
-│   │   └── repositories/      #   in-memory tenant and analysis stores
+│   │   └── repositories/      #   SQLite / Redis tenant and analysis stores
 │   ├── presentation/
 │   │   ├── api/v1/            #   tenants, upload/analyze, upload/demo-data, analytics
 │   │   ├── static/            #   app.js, styles.css
@@ -221,8 +240,24 @@ populated end to end.
 | `GET` | `/api/v1/analytics/status` | Model and batch configuration, plus `ai_available` and `default_engine` so the dashboard can decide whether the AI button is clickable |
 | `GET` | `/api/v1/analytics/customer?tenant_id=&entity_id=` | One customer's score, rank, per-feature percentile evidence and playbook; `404` when the entity is not in the latest run |
 
-Tenant and analysis stores are in memory: restarting the server clears them, and a dashboard
-opened for a forgotten tenant redirects to onboarding rather than looping.
+All `/api/v1` endpoints require a session cookie from `/api/auth/signup` or `/api/auth/login`.
+Send JSON `{ "name": "Your Name", "email": "you@example.com", "password": "at-least-10-characters" }`
+to sign up, or just `email` and `password` to log in. Cookie jars are required for script clients.
+`POST /api/auth/logout` revokes the session; `GET /api/auth/me` returns the current account.
+Missing/expired sessions return 401; another account's workspace returns 404. Browser writes
+must be same-origin. Account pages and private responses use `Cache-Control: no-store`.
+
+`GET /api/v1/exports?tenant_id=ID&format=csv&tier=ALL&search=` downloads the current analysis.
+Use `format=xlsx` for Excel. Tier accepts ALL, CRITICAL, HIGH, MEDIUM or LOW. Until an analysis
+exists, export returns 404. Empty filters produce a header-only file.
+
+Local state lives in `.local/churn.sqlite3` (ignored by Git). Back up this file to retain
+accounts and analyses. Set `CHURN_DB_PATH` as a process environment variable to use another
+persistent path. On Vercel, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`;
+startup refuses ephemeral serverless storage without Redis. Accounts/ownership do not expire;
+Redis tenant/analysis data retains the existing seven-day TTL. Use HTTPS when hosting, and set
+`COOKIE_SECURE=true` as a process environment variable when behind an HTTPS reverse proxy.
+Do not commit databases, user uploads, sessions or environment secrets.
 
 ## Tests
 
@@ -230,10 +265,12 @@ opened for a forgotten tenant redirects to onboarding rather than looping.
 python -m pytest -q
 ```
 
-340 tests, none of which touch the network — the live-gateway tests mount a stub
+345 tests, none of which touch the network — the live-gateway tests mount a stub
 chat-completions app into the client's own transport, so retries and reply parsing are
 exercised offline, and `tests/conftest.py` stops `Settings` reading `api_key.env` before any
 test module is imported, so a real key on disk cannot turn the suite into metered live calls.
+The account/export tests also cover session expiry and revocation, cross-account access,
+CSRF rejection, rate limits, persistence, filtered CSV/Excel, and spreadsheet formula safety.
 They cover the feature math against hand-computed values (velocity,
 zero-denominator guards, failure vocabularies, temporal anchoring, noise exclusion), the mock
 data generator's reproducibility and cohort separation, schema resolution for all three
@@ -257,7 +294,9 @@ the bundled CSVs drive the real pipeline rather than just the file listing.
   offline; the Tailwind CDN also prints a production warning in the console by design.
 - The intervention drawer's deploy button copies the playbook payload to the clipboard. No
   delivery channel (email, SMS, push) is wired up in this build, and the UI says so.
-- Analysis history is not persisted: only the latest run per tenant is kept, in memory.
+- Only the latest analysis is retained per workspace; there is no analysis history browser.
+- Account registration does not verify email ownership. Password reset, email verification,
+  team invitations and account administration are not included in this version.
 - Free hosted tiers serve stock public models. Weights you tuned yourself need a paid
   endpoint or a local runtime, so what is tunable here is the prompt, the batch size and the
   model choice — `evaluate_ai_provider.py` is what tells you whether a change helped.

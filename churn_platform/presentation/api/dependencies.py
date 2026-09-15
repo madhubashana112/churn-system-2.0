@@ -2,7 +2,7 @@
 
 One place decides which implementation of each interface gets wired up, so the
 rest of the app only ever asks for an abstraction. Module-level singletons are
-deliberate: the parsers are stateless and the repositories are in-memory, keyed
+deliberate: the parsers are stateless and the repositories are persistent, keyed
 by tenant, so sharing them is what lets the dashboard reload into the last
 analysis instead of an empty page.
 
@@ -89,7 +89,7 @@ def build_ai_gateway(settings: Optional[Settings] = None) -> IAIGateway:
 
 
 def _build_repos():
-    """Redis-backed state on Vercel, in-memory everywhere else.
+    """Redis-backed state on Vercel, durable SQLite locally.
 
     Serverless functions are ephemeral and multiply instantiated, so process
     memory is not a store there; the presence of the Upstash REST credentials
@@ -106,7 +106,8 @@ def _build_repos():
         client = Redis.from_env()
         logger.info("State store: Upstash Redis")
         return RedisTenantRepository(client), RedisAnalysisRepository(client)
-    return MemoryTenantRepository(), MemoryAnalysisRepository()
+    from churn_platform.infrastructure.repositories.state_store import SQLiteTenantRepository, SQLiteAnalysisRepository
+    return SQLiteTenantRepository(), SQLiteAnalysisRepository()
 
 
 _tenant_repo, _analysis_repo = _build_repos()

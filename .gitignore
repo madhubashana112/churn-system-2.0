@@ -26,3 +26,8 @@ Thumbs.db
 .vercel/
 .vercel
 .env*
+
+# Private local accounts and analyses
+.local/
+*.sqlite3
+*.sqlite3-*

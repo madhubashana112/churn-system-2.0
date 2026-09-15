@@ -6,7 +6,8 @@ import logging
 from base64 import b64encode
 from typing import List
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from churn_platform.presentation.api.auth import require_tenant
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
 from churn_platform.application.dtos.analysis_response_dto import (
@@ -36,7 +37,7 @@ from churn_platform.presentation.api.dependencies import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/upload", tags=["Upload"])
+router = APIRouter(prefix="/upload", tags=["Upload"], dependencies=[Depends(require_tenant)])
 
 
 @router.post("/analyze", response_model=AnalysisResponse)

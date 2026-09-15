@@ -8,6 +8,7 @@ tenant's own upload rather than a restatement of a prediction count.
 
 from __future__ import annotations
 
+from churn_platform.presentation.api.auth import require_tenant
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
@@ -25,7 +26,7 @@ from churn_platform.presentation.api.dependencies import (
     is_offline_gateway,
 )
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])
+router = APIRouter(prefix="/analytics", tags=["Analytics"], dependencies=[Depends(require_tenant)])
 
 
 class PlatformStatus(BaseModel):

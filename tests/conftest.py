@@ -9,6 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import os
+import tempfile
+from pathlib import Path
+
+_test_state = tempfile.TemporaryDirectory(prefix="churn-tests-")
+os.environ["CHURN_DB_PATH"] = str(Path(_test_state.name) / "state.sqlite3")
+os.environ.pop("UPSTASH_REDIS_REST_URL", None)
+os.environ.pop("UPSTASH_REDIS_REST_TOKEN", None)
+os.environ.pop("VERCEL", None)
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
@@ -207,3 +215,14 @@ def sector_predictions() -> Dict[str, List[Tuple[Any, Any]]]:
         sector: run_async(cores[sector].analyze(sector_features(sector)))
         for sector in SECTORS
     }
+
+
+def authenticated_client():
+    from uuid import uuid4
+    from fastapi.testclient import TestClient
+    from churn_platform.main import app
+    client = TestClient(app)
+    response = client.post('/api/auth/signup', json={
+        'name': 'Integration tester', 'email': f'{uuid4().hex}@example.com', 'password': 'Test-only-password-42'})
+    assert response.status_code == 201, response.text
+    return client

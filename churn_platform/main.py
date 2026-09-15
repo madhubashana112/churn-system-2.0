@@ -11,8 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -24,7 +24,9 @@ from churn_platform.domain.models.sector import (
     normalize_sector,
 )
 from churn_platform.presentation.api.dependencies import get_tenant_repo
-from churn_platform.presentation.api.v1 import analytics, tenants, upload
+from churn_platform.presentation.api.v1 import analytics, tenants, upload, exports
+from churn_platform.presentation.api import auth
+from churn_platform.infrastructure.repositories.state_store import store
 
 PRESENTATION_DIR = Path(__file__).resolve().parent / "presentation"
 
@@ -46,14 +48,19 @@ app.mount(
 )
 templates = Jinja2Templates(directory=str(PRESENTATION_DIR / "templates"))
 
-app.include_router(tenants.router, prefix="/api/v1")
+app.include_router(auth.router)
+app.include_router(exports.router, prefix="/api/v1")
+app.include_router(tenants.router, prefix="/api/v1", dependencies=[Depends(auth.require_user)])
 app.include_router(upload.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+    user = await auth.session_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse(request=request, name="index.html", context={"user": user})
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -64,9 +71,13 @@ async def read_dashboard(request: Request, tenant_id: Optional[str] = None):
     claims, so a hand-edited localStorage cannot load a FinTech customer base
     into the Telecom dashboard.
     """
+    user = await auth.session_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     if tenant_id is None:
-        # A bootstrap page: it reads the stored tenant id and comes back here.
-        return templates.TemplateResponse(request=request, name="dashboard.html")
+        tenant_id = await store.get("workspace:" + user["id"])
+        return RedirectResponse("/dashboard?tenant_id=" + tenant_id if tenant_id else "/", status_code=303)
+    await auth.require_tenant(request, user)
 
     tenant = await get_tenant_repo().get(tenant_id)
     sector = normalize_sector(tenant.sector) if tenant else None
@@ -80,6 +91,7 @@ async def read_dashboard(request: Request, tenant_id: Optional[str] = None):
         request=request,
         name=SECTOR_TEMPLATES[sector],
         context={
+            "user": user,
             "tenant_id": tenant.tenant_id,
             "tenant_name": tenant.name,
             "sector_key": sector,
@@ -101,6 +113,10 @@ async def read_customer(
     goes to onboarding instead of rendering a page whose client-side fetch is
     guaranteed to 404.
     """
+    user = await auth.session_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    await auth.require_tenant(request, user)
     tenant = await get_tenant_repo().get(tenant_id) if tenant_id and entity_id else None
     sector = normalize_sector(tenant.sector) if tenant else None
     if sector is None:
@@ -110,6 +126,7 @@ async def read_customer(
         request=request,
         name="customer_detail.html",
         context={
+            "user": user,
             "tenant_id": tenant.tenant_id,
             "tenant_name": tenant.name,
             "sector_key": sector,
@@ -117,6 +134,32 @@ async def read_customer(
             "entity_id": entity_id,
         },
     )
+
+
+
+
+@app.middleware("http")
+async def account_security(request: Request, call_next):
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("origin")
+        expected = str(request.base_url).rstrip("/")
+        if (origin and origin != expected) or request.headers.get("sec-fetch-site") == "cross-site":
+            return JSONResponse({"detail": "Cross-site requests are not allowed"}, status_code=403)
+    response = await call_next(request)
+    if not request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "same-origin"
+    return response
+
+
+@app.get("/login", response_class=HTMLResponse)
+@app.get("/signup", response_class=HTMLResponse)
+async def account_page(request: Request):
+    if await auth.session_user(request):
+        return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(request=request, name="auth.html", context={"signup": request.url.path == "/signup"})
 
 
 if __name__ == "__main__":

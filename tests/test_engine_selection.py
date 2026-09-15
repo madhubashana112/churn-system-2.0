@@ -65,7 +65,8 @@ def clean_env(monkeypatch):
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    from conftest import authenticated_client
+    return authenticated_client()
 
 
 @pytest.fixture

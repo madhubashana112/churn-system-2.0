@@ -54,7 +54,8 @@ SECTOR_TEMPLATE_MARKERS: Dict[str, str] = {
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
-    return TestClient(app)
+    from conftest import authenticated_client
+    return authenticated_client()
 
 
 @pytest.fixture(scope="module")
@@ -171,11 +172,11 @@ class TestStatusEndpoint:
 
 
 class TestDashboardRouting:
-    def test_without_a_tenant_the_bootstrap_page_is_served(self, client: TestClient):
+    def test_without_a_tenant_the_saved_workspace_is_opened(self, client: TestClient):
         response = client.get("/dashboard")
 
         assert response.status_code == 200
-        assert "localStorage" in response.text
+        assert 'id="upload-panel"' in response.text
 
     @pytest.mark.parametrize("sector", SECTORS)
     def test_the_template_follows_the_tenants_sector(self, client, analyzed_tenants, sector):
@@ -185,13 +186,12 @@ class TestDashboardRouting:
         assert SECTOR_TEMPLATE_MARKERS[sector] in response.text
         assert f'data-sector="{sector.lower()}"' in response.text
 
-    def test_a_tenant_the_server_has_forgotten_goes_to_onboarding(self, client: TestClient):
+    def test_an_unknown_workspace_is_not_disclosed(self, client: TestClient):
         """Rendering the bootstrap page here would bounce the browser straight back
         to this same URL, because the bootstrap reads the stale localStorage id."""
         response = client.get("/dashboard?tenant_id=no-such-tenant", follow_redirects=False)
 
-        assert response.status_code == 303
-        assert response.headers["location"] == "/"
+        assert response.status_code == 404
 
 
 class TestAnalysisRun:

@@ -236,7 +236,8 @@ class TestDescribeEntityUseCase:
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
-    return TestClient(app)
+    from conftest import authenticated_client
+    return authenticated_client()
 
 
 @pytest.fixture(scope="module")
@@ -326,8 +327,7 @@ class TestCustomerPage:
             assert response.status_code == 303, url
             assert response.headers["location"] == "/"
 
-    def test_a_tenant_the_server_has_forgotten_goes_to_onboarding(self, client: TestClient):
+    def test_an_unknown_workspace_is_not_disclosed(self, client: TestClient):
         response = client.get("/customer?tenant_id=no-such-tenant&entity_id=usr_1", follow_redirects=False)
 
-        assert response.status_code == 303
-        assert response.headers["location"] == "/"
+        assert response.status_code == 404

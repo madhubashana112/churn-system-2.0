@@ -11,3 +11,4 @@ aiofiles
 pytest
 python-dotenv
 upstash-redis
+httpx

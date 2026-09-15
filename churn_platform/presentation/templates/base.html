@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="/static/js/theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Churn AI{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -58,6 +59,7 @@
 </aside>
 
 <main class="main">
+    <div class="account-toolbar"><span>{{ user.name }}</span><a class="btn btn--ghost" href="/">New workspace</a><button class="btn btn--ghost" type="button" data-theme-toggle>Dark mode</button><button class="btn btn--ghost" type="button" data-logout>Log out</button></div>
     <header class="page-head">
         <p class="page-head__eyebrow">{% block page_eyebrow %}{{ sector_label | default('', true) }}{% endblock %}</p>
         <h1 class="page-head__title">{% block page_title %}Churn dashboard{% endblock %}</h1>
@@ -173,6 +175,8 @@
                     <p class="panel__subtitle">{% block table_subtitle %}Sorted by predicted churn probability, highest first.{% endblock %}</p>
                 </div>
                 <div class="table-tools">
+                    <button class="btn btn--ghost" type="button" data-export="csv">Export CSV</button>
+                    <button class="btn btn--ghost" type="button" data-export="xlsx">Export Excel</button>
                     <label class="text-xs text-gray-500 font-semibold uppercase tracking-wide" for="tier-filter">Tier</label>
                     <select id="tier-filter" class="select">
                         <option value="ALL" selected>All tiers</option>
@@ -192,7 +196,7 @@
                 </table>
             </div>
             <div class="panel__body panel__body--tight">
-                <p class="text-xs text-gray-500" id="row-count-note"></p>
+                <p class="text-xs text-gray-500" id="row-count-note"></p><p class="field-hint">Exports include all customers matching the tier and ID filters, including rows beyond the table limit.</p><p id="export-status" role="status" class="field-hint"></p>
             </div>
         </section>
     </div>
@@ -226,5 +230,6 @@
 
 <script src="/static/js/app.js"></script>
 {% block scripts %}{% endblock %}
+<script src="/static/js/account.js"></script>
 </body>
 </html>

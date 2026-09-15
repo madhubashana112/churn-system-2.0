@@ -886,3 +886,33 @@ body {
     .landing__foot { margin-top: .4rem; }
     .landing__form { padding: 2rem 1.1rem 3rem; }
 }
+
+/* Account controls and theme tokens shared by every page. */
+:root { color-scheme: light; }
+.auth-page { margin:0; --accent:#4f46e5; --accent-soft:#eef2ff; --accent-ink:#312e81; }
+.account-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.6rem; margin-bottom:1.5rem; font-size:.85rem; }
+.auth-kicker { font-size:.7rem; letter-spacing:.18em; margin-top:3.5rem; color:#c7d2fe; }
+.auth-switch { text-align:center; margin-top:1.5rem; color:var(--ink-soft); font-size:.9rem; }
+.auth-switch a { color:var(--accent); font-weight:600; }
+.field-hint { font-size:.78rem; color:var(--muted); margin:.5rem 0; }
+.password-toggle { display:flex; align-items:center; gap:.5rem; font-size:.85rem; margin:0 0 1.4rem; color:var(--ink-soft); }
+[data-theme="dark"] {
+    color-scheme:dark;
+    --bg:#0c1020; --surface:#151b2e; --surface-sunken:#101628;
+    --border:#2a344e; --border-strong:#42506b;
+    --ink:#edf1fa; --ink-soft:#bdc8dc; --muted:#a1aec6;
+    --critical:#ff9b94; --critical-soft:#46232e;
+    --warning:#ffd080; --warning-soft:#3e3020;
+    --good:#75dfb1; --good-soft:#183d34;
+    --shadow:0 2px 6px #0004; --shadow-lift:0 12px 32px #0006;
+}
+[data-theme="dark"] body { --accent:#9693ff !important; --accent-soft:#28264b !important; --accent-ink:#d4d2ff !important; }
+[data-theme="dark"] .sidebar { background:linear-gradient(178deg,#232448,#101426); }
+[data-theme="dark"] .btn--primary { background:#6861dc; color:white; }
+[data-theme="dark"] .btn--success { background:#167852; color:white; }
+[data-theme="dark"] .text-gray-500, [data-theme="dark"] .text-gray-600 { color:var(--muted); }
+[data-theme="dark"] .pill--HIGH { background:var(--warning-soft); }
+[data-theme="dark"] .pill--MEDIUM { background:#20375b; color:#a4c8ff; }
+[data-theme="dark"] .landing__brand { background:linear-gradient(150deg,#242653,#12172c); }
+[data-theme="dark"] .banner--warning { border-color:#74562c; }
+@media (max-width:600px) { .account-toolbar { justify-content:flex-start; } .table-tools { flex-wrap:wrap; } }

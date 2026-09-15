@@ -34,6 +34,28 @@
     };
     const SERIES_FALLBACK = ['#98a2b3', '#f2b824', '#7a5af8', '#dd2590', '#4e5ba6'];
 
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
+            const status = document.getElementById('export-status');
+            button.disabled = true; status.textContent = 'Preparing export…';
+            const format = button.dataset.export;
+            const query = new URLSearchParams({tenant_id: currentTenantId(), format,
+                tier: document.getElementById('tier-filter').value,
+                search: document.getElementById('search-filter').value.trim()});
+            try {
+                const response = await fetch('/api/v1/exports?' + query);
+                if (response.status === 401) { window.location.assign('/login'); return; }
+                if (!response.ok) { const data = await response.json(); throw new Error(data.detail || 'Export failed'); }
+                const url = URL.createObjectURL(await response.blob());
+                const link = document.createElement('a'); link.href = url;
+                link.download = 'churn-analysis.' + format; document.body.append(link); link.click(); link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 30000);
+                status.textContent = 'Export downloaded.';
+            } catch (err) { status.textContent = err.message; }
+            finally { button.disabled = false; }
+        }));
+    });
+
     // -- small DOM helpers --------------------------------------------------
 
     function el(tag, attrs, ...children) {
@@ -93,6 +115,7 @@
 
     async function requestJson(url, options) {
         const response = await fetch(url, options);
+        if (response.status === 401) { window.location.assign('/login'); throw new Error('Your session expired. Please log in again.'); }
         let body = null;
         try {
             body = await response.json();
@@ -219,7 +242,7 @@
                     data: dataset.values,
                     backgroundColor: sliceColors,
                     borderWidth: 2,
-                    borderColor: '#ffffff',
+                    borderColor: cssVar('--surface', '#ffffff'),
                 };
             }
             return {
@@ -236,16 +259,16 @@
         const scales = isDoughnut ? {} : {
             x: {
                 stacked: !!spec.stacked,
-                title: spec.x_label ? { display: true, text: spec.x_label, color: '#7b8291', font: { size: 11 } } : undefined,
+                title: spec.x_label ? { display: true, text: spec.x_label, color: cssVar('--muted', '#7b8291'), font: { size: 11 } } : undefined,
                 grid: { display: false },
-                ticks: { color: '#7b8291', font: { size: 11 } },
+                ticks: { color: cssVar('--muted', '#7b8291'), font: { size: 11 } },
             },
             y: {
                 stacked: !!spec.stacked,
                 beginAtZero: true,
-                title: spec.y_label ? { display: true, text: spec.y_label, color: '#7b8291', font: { size: 11 } } : undefined,
-                grid: { color: '#eef0f3' },
-                ticks: { color: '#7b8291', font: { size: 11 } },
+                title: spec.y_label ? { display: true, text: spec.y_label, color: cssVar('--muted', '#7b8291'), font: { size: 11 } } : undefined,
+                grid: { color: cssVar('--border', '#eef0f3') },
+                ticks: { color: cssVar('--muted', '#7b8291'), font: { size: 11 } },
             },
         };
 
@@ -261,7 +284,7 @@
                         display: isDoughnut || datasets.length > 1,
                         position: isDoughnut ? 'right' : 'top',
                         align: 'start',
-                        labels: { boxWidth: 10, boxHeight: 10, color: '#4b5160', font: { size: 11 }, usePointStyle: true },
+                        labels: { boxWidth: 10, boxHeight: 10, color: cssVar('--ink-soft', '#4b5160'), font: { size: 11 }, usePointStyle: true },
                     },
                     tooltip: tooltipFor(spec),
                 },
@@ -270,7 +293,11 @@
         };
     }
 
+    let currentChartSpecs = null;
+    window.addEventListener("themechange", () => { if (currentChartSpecs) renderCharts(currentChartSpecs); });
+
     function renderCharts(charts) {
+        currentChartSpecs = charts;
         document.querySelectorAll('[data-chart]').forEach((canvas) => {
             const key = canvas.getAttribute('data-chart');
             const panel = canvas.closest('.panel');

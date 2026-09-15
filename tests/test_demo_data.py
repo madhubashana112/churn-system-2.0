@@ -28,7 +28,8 @@ SECTOR_FILE_NAMES = {
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(app)
+    from conftest import authenticated_client
+    return authenticated_client()
 
 
 def register(client: TestClient, sector: str) -> str:
@@ -110,7 +111,7 @@ def test_an_unknown_tenant_is_not_found(client):
     response = client.get("/api/v1/upload/demo-data?tenant_id=nope")
 
     assert response.status_code == 404
-    assert "nope" in response.json()["detail"]
+    assert response.json()["detail"] == "Workspace not found"
 
 
 def test_the_served_files_can_be_analyzed_straight_back(client):

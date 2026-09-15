@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ 'Sign up' if signup else 'Log in' }} — Churn AI</title>
+<script src="/static/js/theme.js"></script>
+<link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="auth-page">
+<div class="landing">
+<aside class="landing__brand">
+<div class="landing__logo"><span class="landing__logo-tile">C</span><span class="landing__logo-name">Churn AI</span></div>
+<p class="auth-kicker">CUSTOMER INTELLIGENCE</p>
+<h1 class="landing__headline">Stronger relationships.<br><em>Fewer goodbyes.</em></h1>
+<p class="landing__lede">Understand churn risk, explore the evidence, and give your team a clear next step.</p>
+<ol class="landing__steps"><li><span class="landing__step-n">1</span> Connect your customer data</li><li><span class="landing__step-n">2</span> Discover the signals behind risk</li><li><span class="landing__step-n">3</span> Turn insights into retention actions</li></ol>
+<p class="landing__foot">Built for SaaS, telecom and financial services.</p>
+</aside>
+<main class="landing__form">
+<div class="landing__card">
+<div class="account-toolbar"><button type="button" class="btn btn--ghost" data-theme-toggle>Dark mode</button></div>
+<p class="page-head__eyebrow">YOUR RETENTION WORKSPACE</p>
+<h1 class="onboard__title">{{ 'Create your account' if signup else 'Welcome back' }}</h1>
+<p class="onboard__subtitle">{{ 'Start with your account. Set up your company next.' if signup else 'Log in to continue to your customer insights.' }}</p>
+<form id="auth-form" data-mode="{{ 'signup' if signup else 'login' }}">
+<div id="auth-error" class="form-error" role="alert" hidden></div>
+{% if signup %}<div class="field"><label class="field__label" for="name">Full name</label><input class="input" id="name" name="name" autocomplete="name" maxlength="100" required></div>{% endif %}
+<div class="field"><label class="field__label" for="email">Email address</label><input class="input" id="email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@company.com" required></div>
+<div class="field"><label class="field__label" for="password">Password</label><input class="input" id="password" name="password" type="password" autocomplete="{{ 'new-password' if signup else 'current-password' }}" minlength="{{ 10 if signup else 1 }}" maxlength="128" required>{% if signup %}<p class="field-hint">Use at least 10 characters.</p>{% endif %}</div>
+{% if signup %}<div class="field"><label class="field__label" for="confirm-password">Confirm password</label><input class="input" id="confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></div>{% endif %}
+<label class="password-toggle"><input id="show-password" type="checkbox"> Show password</label>
+<button type="submit" class="btn btn--primary btn--block" id="auth-submit">{{ 'Create account' if signup else 'Log in' }}</button>
+</form>
+<p class="auth-switch">{% if signup %}Already have an account? <a href="/login">Log in</a>{% else %}New to Churn AI? <a href="/signup">Create an account</a>{% endif %}</p>
+</div>
+</main>
+</div>
+<script src="/static/js/account.js"></script>
+</body></html>
