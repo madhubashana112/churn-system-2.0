@@ -66,6 +66,13 @@ async def require_tenant(request: Request, user=Depends(require_user)):
     tenant_id = request.path_params.get("tenant_id") or request.query_params.get("tenant_id")
     if not tenant_id and request.url.path.endswith("/analyze"):
         tenant_id = (await request.form()).get("tenant_id")
+    if request.url.path.endswith("/confirm-mapping"):
+        try:
+            tenant_id = (await request.json()).get("tenant_id")
+        except (ValueError, AttributeError):
+            raise HTTPException(400, "Invalid confirmation request")
+        if not isinstance(tenant_id, str) or not tenant_id:
+            raise HTTPException(400, "Workspace ID is required")
     if tenant_id and await store.get("owner:" + tenant_id) != user["id"]:
         raise HTTPException(404, "Workspace not found")
     return user

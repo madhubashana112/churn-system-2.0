@@ -90,8 +90,10 @@ def _parse_excel(file_name: str, contents: bytes) -> Dict[str, pd.DataFrame]:
 
 
 def sample_csv(df: pd.DataFrame, rows: int = SAMPLE_ROWS) -> str:
-    """The header plus a few rows, which is all schema resolution needs."""
-    return df.head(rows).to_csv(index=False)
+    """Deterministic rows spread across the export, including first and last."""
+    count = min(max(rows, 0), len(df))
+    indices = [round(i * (len(df) - 1) / (count - 1)) for i in range(count)] if count > 1 else list(range(count))
+    return df.iloc[indices].to_csv(index=False)
 
 
 def ingest(uploads: Iterable[Tuple[str, bytes]]) -> IngestedFiles:

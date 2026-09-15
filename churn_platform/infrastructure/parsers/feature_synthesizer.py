@@ -16,7 +16,7 @@ Two rules keep this predictable:
   is decided by ``_canonical_table_order`` rather than by the order the files
   happened to arrive in.
 
-All time windows are anchored to the maximum timestamp present in the data,
+All time windows are anchored to REFERENCE_DATE (2025-06-01),
 never to the wall clock, so re-running on a frozen dataset is idempotent.
 """
 
@@ -32,6 +32,7 @@ import pandas as pd
 from churn_platform.domain.interfaces.i_feature_synthesizer import IFeatureSynthesizer
 from churn_platform.domain.models.customer_features import CustomerFeatures
 from churn_platform.domain.models.schema_mapping import (
+    REFERENCE_DATE,
     ROLE_DIMENSION,
     ROLE_TEXT,
     ROLE_TIME_SERIES,
@@ -120,15 +121,10 @@ def resolve_temporal_anchor(
     schema: SchemaMapping,
     dataframes: Dict[str, pd.DataFrame],
 ) -> tuple[Optional[pd.Timestamp], float]:
-    """Anchor every window to the newest *activity* timestamp in the dataset.
+    """Use the fixed 1 June 2025 reference, shared with sector enrichers.
 
-    Only schema-declared timestamp columns on non-DIMENSION tables count, and
-    activity tables win over transactional ones. This matters: a billing table's
-    ``due_date`` can legitimately sit in the future, and anchoring on it shifts
-    every window forward and flattens recent activity to zero.
-
-    Public because the sector enrichers must share the synthesizer's anchor
-    rather than deriving their own.
+    Activity tables determine the observed span first, then transactions.
+    Future timestamps never move the reference date forward.
     """
     for role in (ROLE_TIME_SERIES, ROLE_TRANSACTIONAL):
         stamps = []
@@ -144,7 +140,7 @@ def resolve_temporal_anchor(
         if not stamps:
             continue
         combined = pd.concat(stamps)
-        reference_ts = combined.max()
+        reference_ts = pd.Timestamp(REFERENCE_DATE).tz_localize(None)
         span = (reference_ts - combined.min()).total_seconds() / 86400
         return reference_ts, float(span) if span > 0 else DEFAULT_SPAN_DAYS
     return None, DEFAULT_SPAN_DAYS
@@ -216,6 +212,7 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
         schema: SchemaMapping,
         dataframes: Dict[str, pd.DataFrame],
     ) -> List[CustomerFeatures]:
+        schema, dataframes = self.prepare(schema, dataframes)
         prepared = self._prepare(schema, dataframes)
         if not prepared:
             logger.warning("No usable tables found in schema mapping; returning no features")
@@ -233,6 +230,7 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
             prefix = f"{table_stem(table.file_name)}_"
 
             self._apply_dimension(table, df, features)
+            self._apply_custom(table, df, features)
             self._apply_row_count(prefix, table, df, features)
             # A dimension table's date is a signup/creation date, not activity,
             # so deriving a velocity from it would be noise.
@@ -247,6 +245,47 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
             CustomerFeatures(entity_id=eid, features={k: _round(v) for k, v in payload.items()})
             for eid, payload in features.items()
         ]
+
+    def prepare(self, schema, dataframes):
+        """Apply confirmed names to copies, sharing the same schema with enrichers."""
+        runtime = schema.model_copy(deep=True)
+        frames = {name: df.copy() for name, df in dataframes.items()}
+        for table in runtime.tables:
+            if not table.columns or table.file_name not in frames:
+                continue
+            df = frames[table.file_name]
+            drops = [c.source_column for c in table.columns if c.canonical_role == "NOISE_IGNORE"]
+            kept = [c for c in table.columns if c.canonical_role != "NOISE_IGNORE"]
+            renames = {c.source_column: c.target_name for c in kept}
+            if len(set(renames.values())) != len(renames):
+                raise ValueError("Mapped column names must be unique within each table")
+            frames[table.file_name] = df.drop(columns=drops, errors="ignore").rename(columns=renames)
+            table.primary_entity_key = renames.get(table.primary_entity_key, table.primary_entity_key)
+            table.timestamp_column = renames.get(table.timestamp_column, table.timestamp_column)
+            for column in kept:
+                column.source_column = column.target_name
+            table.columns = kept
+            table.noise_columns = []
+        runtime.primary_entity_key = next((t.primary_entity_key for t in runtime.tables), runtime.primary_entity_key)
+        return runtime, frames
+
+    def _apply_custom(self, table, df, features):
+        key = table.primary_entity_key
+        if key not in df.columns:
+            return
+        for column in table.columns:
+            if column.canonical_role != "CUSTOM" or column.custom_label not in df.columns:
+                continue
+            for entity, group in df.groupby(key):
+                payload = features.get(str(entity))
+                if payload is None:
+                    continue
+                series = group[column.custom_label].dropna()
+                if pd.api.types.is_numeric_dtype(series):
+                    summary = {"mean": float(series.mean()), "sum": float(series.sum())} if len(series) else None
+                else:
+                    summary = list(dict.fromkeys(series.astype(str)))[:3]
+                payload.setdefault("custom_metrics", {}).setdefault(table.file_name, {})[column.custom_label] = summary
 
     # -- preparation ---------------------------------------------------------
 
@@ -309,7 +348,9 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
         key = table.primary_entity_key
         if key not in df.columns:
             return
-        attribute_columns = [c for c in df.columns if c != key and c != table.timestamp_column]
+        custom_names = {c.custom_label for c in table.columns if c.canonical_role == "CUSTOM"}
+        attribute_columns = [c for c in df.columns if c != key and c != table.timestamp_column
+                             and c not in custom_names and c != "custom_metrics"]
         for row in df[[key, *attribute_columns]].to_dict("records"):
             payload = features.get(str(row[key]))
             if payload is None:

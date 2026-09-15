@@ -5,7 +5,7 @@ dashboard is actually consuming.
 """
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Literal
 
 from churn_platform.domain.models.churn_prediction import ChurnPrediction
 from churn_platform.domain.models.retention_playbook import RetentionPlaybook
@@ -18,6 +18,7 @@ class PredictionResult(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
+    requires_human_review: Literal[False] = False
     schema_mapping: SchemaMapping
     predictions: List[PredictionResult]
 

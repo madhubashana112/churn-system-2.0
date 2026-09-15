@@ -350,7 +350,10 @@
         panel.hidden = false;
         byId('schema-key').textContent = mapping.primary_entity_key;
         byId('schema-table-count').textContent = String(mapping.tables.length);
-        byId('schema-source').textContent = offline ? 'Resolved by the system model (rule-based)' : 'Resolved by the AI model';
+        const confirmed = mapping.tables.some(t => (t.columns || []).some(c => c.confidence === 1 &&
+            /confirmed/i.test(c.reasoning || '')));
+        byId('schema-source').textContent = confirmed ? 'Includes workspace-confirmed column mappings'
+            : offline ? 'Resolved by the system model (rule-based)' : 'Resolved by the AI model';
 
         const body = clear(byId('schema-rows'));
         for (const table of mapping.tables) {
@@ -776,6 +779,19 @@
 
         try {
             const result = await requestJson(API.analyze, { method: 'POST', body: form });
+            if (result.requires_human_review) {
+                setBusy(false);
+                openSchemaReview(tenantId, result);
+                return;
+            }
+            await finishAnalysis(tenantId, result);
+        } catch (err) {
+            setBusy(false);
+            renderBanners([['warning', `Analysis failed: ${err.message}`]]);
+        }
+    }
+
+    async function finishAnalysis(tenantId, result) {
             setBusy(true, 'Aggregating sector metrics\u2026');
             const summary = await loadMetrics(tenantId);
             const messages = [];
@@ -791,10 +807,95 @@
             }
             renderBanners(messages);
             setBusy(false);
-        } catch (err) {
-            setBusy(false);
-            renderBanners([['warning', `Analysis failed: ${err.message}`]]);
+    }
+
+    function openSchemaReview(tenantId, review) {
+        const dialog = byId('schema-review-dialog');
+        const form = byId('schema-review-form');
+        const container = byId('schema-review-columns');
+        const error = byId('schema-review-error');
+        const confirm = byId('schema-review-confirm');
+        const cancel = byId('schema-review-cancel');
+        const controls = [];
+        const tables = [];
+        let submitting = false;
+        container.replaceChildren();
+        error.textContent = review.schema_mapping.review_reasons.join('; ');
+        const labels = { CUSTOMER_ID: 'Customer ID', TIMESTAMP: 'Timestamp', TRANSACTION_AMOUNT: 'Transaction amount',
+            STATUS: 'Status', EVENT_TYPE: 'Event type', TEXT: 'Text / feedback', ATTRIBUTE: 'Attribute (keep original name)',
+            NOISE_IGNORE: 'Ignore / Drop Column', CUSTOM: 'Custom / Add New Name' };
+        const element = (tag, text) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; return el; };
+        for (const table of review.schema_mapping.tables) {
+            const section = element('section'); section.className = 'schema-review__table';
+            section.appendChild(element('h3', table.file_name));
+            const tableLabel = element('label', 'Table type');
+            const tableSelect = element('select');
+            for (const [role, name] of Object.entries({DIMENSION:'Customer attributes', TIME_SERIES_EVENT:'Activity events', TRANSACTIONAL:'Transactions', UNSTRUCTURED_TEXT:'Feedback / support text'})) {
+                const option = element('option', name); option.value = role; tableSelect.appendChild(option);
+            }
+            tableSelect.value = table.role; tableLabel.appendChild(tableSelect); section.appendChild(tableLabel);
+            tables.push({file_name: table.file_name, select: tableSelect});
+            const scroll = element('div'); scroll.className = 'table-scroll';
+            const grid = element('table');
+            const head = element('thead'); const header = element('tr');
+            for (const name of ['Uploaded column', 'Sample values', 'Confidence', 'Use as']) header.appendChild(element('th', name));
+            head.appendChild(header); grid.appendChild(head);
+            const body = element('tbody');
+            for (const column of table.columns) {
+                const row = element('tr');
+                if (column.confidence < .8 || column.status === 'REQUIRES_HUMAN_REVIEW') row.className = 'needs-review';
+                const source = element('td', column.source_column);
+                source.appendChild(element('small', column.reasoning || 'Please select a role.'));
+                row.appendChild(source);
+                const sample = element('td');
+                for (const value of column.sample_values) sample.appendChild(element('div', value));
+                if (!column.sample_values.length) sample.textContent = 'No non-empty sample values';
+                row.appendChild(sample);
+                row.appendChild(element('td', `${Math.round(column.confidence * 100)}%`));
+                const cell = element('td'); const select = element('select');
+                select.setAttribute('aria-label', `Role for ${column.source_column} in ${table.file_name}`);
+                select.required = true;
+                const placeholder = element('option', 'Choose a role'); placeholder.value = ''; select.appendChild(placeholder);
+                for (const role of review.canonical_roles) {
+                    const option = element('option', labels[role] || role); option.value = role; select.appendChild(option);
+                }
+                select.value = column.canonical_role === 'UNKNOWN' ? '' : column.canonical_role;
+                const custom = element('input'); custom.type = 'text'; custom.maxLength = 100;
+                custom.placeholder = 'e.g. Priority SLA Tier'; custom.value = column.custom_label || '';
+                custom.setAttribute('aria-label', `Custom name for ${column.source_column} in ${table.file_name}`);
+                const syncCustom = () => { custom.hidden = select.value !== 'CUSTOM'; custom.required = !custom.hidden; };
+                select.addEventListener('change', syncCustom); syncCustom();
+                cell.append(select, custom); row.appendChild(cell); body.appendChild(row);
+                controls.push({file_name: table.file_name, source_column: column.source_column, select, custom});
+            }
+            grid.appendChild(body); scroll.appendChild(grid); section.appendChild(scroll); container.appendChild(section);
         }
+        cancel.onclick = () => { if (!submitting) dialog.close(); };
+        dialog.oncancel = (event) => { if (submitting) event.preventDefault(); };
+        form.onsubmit = async (event) => {
+            event.preventDefault();
+            if (submitting || !form.reportValidity()) return;
+            const mappings = controls.map(c => ({file_name: c.file_name, source_column: c.source_column,
+                canonical_role: c.select.value, custom_label: c.select.value === 'CUSTOM' ? c.custom.value.trim() : null}));
+            submitting = true; confirm.disabled = true; cancel.disabled = true;
+            confirm.textContent = 'Analyzing…'; error.textContent = '';
+            setBusy(true, 'Applying confirmed mappings and analyzing customers…');
+            try {
+                const result = await requestJson('/api/v1/upload/confirm-mapping', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({tenant_id: tenantId, upload_session_id: review.upload_session_id, mappings,
+                        table_roles: Object.fromEntries(tables.map(t => [t.file_name, t.select.value]))})
+                });
+                dialog.close();
+                await finishAnalysis(tenantId, result);
+            } catch (err) {
+                error.textContent = err.message; setBusy(false);
+            } finally {
+                submitting = false; confirm.disabled = false; cancel.disabled = false;
+                confirm.textContent = 'Confirm & Run Analysis';
+            }
+        };
+        dialog.showModal();
     }
 
     // -- sample data --------------------------------------------------------

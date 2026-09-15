@@ -89,20 +89,20 @@ class TestActivityVelocity:
         ])
         frames = {
             "users.csv": users,
-            # Span runs from 12 days ago to 1 day ago, i.e. 11 days. The anchor
-            # is the newest event, so the offsets are 0, 7, 8, 9, 10 and 11.
+            # Fixed reference: offsets stay 1, 8, 9, 10, 11 and 12 days.
+            # Dormancy spans the oldest event through the reference date.
             "events_log.csv": events_frame([("u1", d) for d in (1, 8, 9, 10, 11, 12)]),
         }
         features = by_entity(synthesize(schema, frames))
 
-        assert features["u1"]["event_count_7d"] == 2
-        assert features["u1"]["event_count_prior_30d"] == 4
-        assert features["u1"]["activity_velocity"] == pytest.approx(2 / (4 / WEEKS_IN_PRIOR_WINDOW), abs=1e-4)
+        assert features["u1"]["event_count_7d"] == 1
+        assert features["u1"]["event_count_prior_30d"] == 5
+        assert features["u1"]["activity_velocity"] == pytest.approx(1 / (5 / WEEKS_IN_PRIOR_WINDOW), abs=1e-4)
         assert features["u2"]["event_count_7d"] == 0
         assert features["u2"]["event_count_total"] == 0
         assert features["u2"]["activity_velocity"] == 0.0
         # No recorded activity means dormant for the whole observed span.
-        assert features["u2"]["recency_days"] == pytest.approx(11.0)
+        assert features["u2"]["recency_days"] == pytest.approx(12.0)
 
     def test_events_outside_the_prior_window_are_excluded(self):
         """Activity older than 37 days must not inflate the baseline."""

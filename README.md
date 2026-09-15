@@ -41,7 +41,7 @@ again. The original project and Git history are retained from
 3. **Feature synthesis** — rolling 7-day vs prior-30-day activity velocity, failure ratios,
    recency, keyword sentiment over free-text columns, plus sector math (balance drain and P2P
    failure streaks for FinTech, recharge gaps and tower concentration for Telecom, export
-   share for SaaS). Windows are anchored to the newest timestamp in the upload, not to the
+   share for SaaS). Windows are anchored to the fixed reference date, 1 June 2025 (12:00 UTC), not to the
    wall clock, so the same files always produce the same features.
 4. **Scoring** — the sector core scores every customer and emits a churn probability, a risk
    tier, sector-specific findings and a retention playbook.
@@ -326,3 +326,31 @@ the bundled CSVs drive the real pipeline rather than just the file listing.
   put 51 customers in HIGH or CRITICAL against a generated cohort of 25. It ranked the cohort
   first (AUC 1.000, top four rows all churning) but flags roughly twice as many customers for
   intervention, which is a precision cost the dashboards do not hide.
+
+
+## Column confidence and human review
+
+Uploads profile each column with up to three distinct sample values. The AI
+resolver returns canonical roles, confidence (0–1), and evidence. The local system
+engine uses conservative header rules instead. Unknown columns, confidence below
+0.80, missing join keys/timestamps, or conflicting output names pause scoring.
+The native **Confirm Column Mapping** dialog supports keyboard navigation, table
+roles, ignored columns, and custom descriptive labels. Custom labels rename the
+working dataframes and appear under `custom_metrics[file_name][custom_label]` in
+the features sent to the configured AI model. The system scorer remains deterministic.
+
+- `POST /api/v1/upload/analyze` returns results or `requires_human_review: true`,
+  an `upload_session_id`, and the proposed schema.
+- `POST /api/v1/upload/confirm-mapping` accepts `tenant_id`, `upload_session_id`,
+  `mappings` (every column once), and optional `table_roles`. Each mapping contains
+  `file_name`, `source_column`, `canonical_role`, and optional `custom_label`.
+- Pending original bytes and schema are gzip-compressed in shared Redis for one
+  hour on Vercel. Local development uses the existing SQLite adapter. Expired
+  sessions return HTTP 410; an active confirmation returns 409. Completed retries
+  reuse the cached result for one hour.
+- Confirmed aliases persist per workspace and logical file/sheet name. Fully
+  remembered schemas skip the schema AI call. New columns are reviewed as needed.
+  Keep file/sheet names consistent to reuse mappings. Samples are refreshed on
+  every upload, and other accounts cannot access sessions or alias memory.
+- Analysis windows always use `REFERENCE_DATE = 2025-06-01T12:00:00Z`, independent
+  of upload date and wall clock. Original files remain unchanged for ZIP export.

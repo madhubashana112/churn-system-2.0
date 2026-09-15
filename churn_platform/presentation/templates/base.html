@@ -230,6 +230,21 @@
     </div>
 </aside>{% endblock %}
 
+<dialog id="schema-review-dialog" class="schema-review" aria-labelledby="schema-review-title" aria-describedby="schema-review-help">
+    <form id="schema-review-form">
+        <header class="schema-review__header">
+            <h2 id="schema-review-title">Confirm Column Mapping</h2>
+            <p id="schema-review-help">Review the suggested roles and sample values before analysis. Amber columns need attention. Your confirmed choices are remembered for this workspace and file name. This upload expires after one hour.</p>
+            <p class="field-hint">Analysis reference date: 1 June 2025.</p>
+        </header>
+        <div id="schema-review-columns"></div>
+        <p id="schema-review-error" role="alert"></p>
+        <footer class="schema-review__footer">
+            <button type="button" id="schema-review-cancel" class="btn">Cancel</button>
+            <button type="submit" id="schema-review-confirm" class="btn btn--primary">Confirm &amp; Run Analysis</button>
+        </footer>
+    </form>
+</dialog>
 <script src="/static/js/app.js"></script>
 {% block scripts %}{% endblock %}
 <script src="/static/js/account.js"></script>

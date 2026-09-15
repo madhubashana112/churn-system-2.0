@@ -916,3 +916,23 @@ body {
 [data-theme="dark"] .landing__brand { background:linear-gradient(150deg,#242653,#12172c); }
 [data-theme="dark"] .banner--warning { border-color:#74562c; }
 @media (max-width:600px) { .account-toolbar { justify-content:flex-start; } .table-tools { flex-wrap:wrap; } }
+
+/* Native dialog provides keyboard focus containment and Escape handling. */
+.schema-review { width: min(1080px, 94vw); max-height: 90vh; margin: auto; padding: 24px;
+    border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-lift); }
+.schema-review::backdrop { background: rgba(10, 15, 30, .65); }
+.schema-review__header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.schema-review__header p { color: var(--ink-soft); max-width: 85ch; }
+.schema-review__table { margin-top: 24px; }
+.schema-review__table h3 { font-weight: 700; overflow-wrap: anywhere; margin-bottom: 8px; }
+.schema-review__table > label { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.schema-review table { width: 100%; border-collapse: collapse; }
+.schema-review td, .schema-review th { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.schema-review th { font-size: .8rem; color: var(--ink-soft); }
+.schema-review td { max-width: 270px; overflow-wrap: anywhere; }
+.schema-review small { display: block; color: var(--ink-soft); margin-top: 6px; }
+.schema-review .needs-review { background: var(--warning-soft); color: var(--warning); }
+.schema-review select, .schema-review input { background: var(--surface); color: var(--ink); border: 1px solid var(--border-strong); border-radius: 6px; padding: 8px; max-width: 100%; }
+.schema-review input { margin-top: 8px; width: 100%; }
+.schema-review__footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; }
+#schema-review-error { color: var(--critical); margin-top: 16px; }

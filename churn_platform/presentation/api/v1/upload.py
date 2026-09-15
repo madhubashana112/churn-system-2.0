@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from typing import List
 
 from churn_platform.presentation.api.auth import require_tenant
@@ -12,14 +12,14 @@ from pydantic import BaseModel
 
 from churn_platform.application.dtos.analysis_response_dto import (
     AnalysisResponse,
-    PredictionResult,
 )
-from churn_platform.application.use_cases.resolve_multi_sheet_schema import (
-    ResolveMultiSheetSchemaUseCase,
-)
-from churn_platform.application.use_cases.synthesize_features import SynthesizeFeaturesUseCase
+from churn_platform.application.use_cases.complete_upload_analysis import CompleteUploadAnalysisUseCase
+from churn_platform.application.use_cases.review_upload_schema import ReviewUploadSchemaUseCase
+from churn_platform.application.use_cases.confirm_schema_mapping import ConfirmSchemaMappingUseCase, ReviewSessionMissing, ReviewSessionBusy
+from churn_platform.application.dtos.schema_review_dto import SchemaReviewResponse, ConfirmSchemaRequest
+from churn_platform.infrastructure.persistence.redis_repos import TenantSchemaMemoryRepository, PendingUploadRepository
 from churn_platform.config import get_settings
-from churn_platform.domain.models.analysis_run import AnalysisRun, EntityOutcome, OriginalUpload
+from churn_platform.domain.models.analysis_run import OriginalUpload
 from churn_platform.domain.models.sector import canonical_sector_label
 from churn_platform.infrastructure.parsers.demo_data import demo_files
 from churn_platform.infrastructure.parsers.file_ingestion import UnsupportedFileError, ingest
@@ -40,12 +40,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Upload"], dependencies=[Depends(require_tenant)])
 
 
-@router.post("/analyze", response_model=AnalysisResponse)
+@router.post("/analyze", response_model=AnalysisResponse | SchemaReviewResponse)
 async def upload_and_analyze(
     tenant_id: str = Form(...),
     files: List[UploadFile] = File(...),
     engine: str = Form("auto"),
-) -> AnalysisResponse:
+) -> AnalysisResponse | SchemaReviewResponse:
     try:
         chosen_engine = resolve_engine(engine)
     except ValueError as exc:
@@ -56,7 +56,7 @@ async def upload_and_analyze(
         raise HTTPException(status_code=404, detail=f"Tenant {tenant_id!r} not found")
 
     try:
-        core = get_sector_core(tenant.sector, chosen_engine)
+        get_sector_core(tenant.sector, chosen_engine)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -81,67 +81,52 @@ async def upload_and_analyze(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    schema = await ResolveMultiSheetSchemaUseCase(
-        get_schema_resolver(chosen_engine)
-    ).execute(ingested.samples)
+    if sum(len(frame.columns) for frame in ingested.dataframes.values()) > 500:
+        raise HTTPException(400, "Upload at most 500 columns across all files and sheets.")
 
-    features = SynthesizeFeaturesUseCase(
-        get_feature_synthesizer(),
-        enricher=get_feature_enricher(),
-    ).execute(schema, ingested.dataframes, sector=tenant.sector)
+    originals = [OriginalUpload(filename=name, content_base64=b64encode(content).decode("ascii")) for name, content in uploads]
+    memory, pending = review_repositories()
+    schema = await ReviewUploadSchemaUseCase(
+        get_schema_resolver(chosen_engine), memory, pending
+    ).execute(tenant, originals, ingested.samples, chosen_engine)
+    if isinstance(schema, SchemaReviewResponse):
+        return schema
 
-    warnings: List[str] = []
-    entities_uploaded = len(features)
-    cap = get_settings().max_entities
-    if cap > 0 and entities_uploaded > cap:
-        warnings.append(
-            f"MAX_ENTITIES={cap} is set, so only the first {cap} of "
-            f"{entities_uploaded} entities were analyzed"
-        )
-        features = features[:cap]
+    return await complete_analysis(tenant, chosen_engine, schema, ingested, originals)
 
-    results = await get_analysis_use_case(chosen_engine).execute(core, features)
-    if len(results) < len(features):
-        warnings.append(
-            f"{len(features) - len(results)} of the {len(features)} submitted entities "
-            "could not be scored; see the server log for the failed batch"
-        )
 
-    # offline_mode describes this run, not the deployment: the dashboard reloads
-    # a stored analysis long after the request, and both engines can now be in
-    # play in the same process.
-    offline = is_offline_engine(chosen_engine)
+def review_repositories():
+    return TenantSchemaMemoryRepository(), PendingUploadRepository()
 
-    # The features travel with the run: the sector KPIs are recomputed from them
-    # on every dashboard load, so a stored prediction without its evidence could
-    # only ever be restated, not re-aggregated.
-    features_by_id = {entry.entity_id: entry.features for entry in features}
-    await get_analysis_repo().save(AnalysisRun(
-        tenant_id=tenant.tenant_id,
-        sector=tenant.sector,
-        schema_mapping=schema,
-        original_files=[OriginalUpload(filename=name, content_base64=b64encode(content).decode("ascii")) for name, content in uploads],
-        outcomes=[
-            EntityOutcome(prediction=pred, playbook=playbook, features=features_by_id.get(pred.entity_id, {}))
-            for pred, playbook in results
-        ],
-        entities_uploaded=entities_uploaded,
-        entities_analyzed=len(results),
-        offline_mode=offline,
-        warnings=warnings,
-    ))
 
-    return AnalysisResponse(
-        schema_mapping=schema,
-        predictions=[
-            PredictionResult(prediction=pred, playbook=playbook)
-            for pred, playbook in results
-        ],
-        entities_uploaded=entities_uploaded,
-        entities_analyzed=len(results),
-        warnings=warnings,
-        offline_mode=offline,
-    )
+async def complete_analysis(tenant, engine, schema, ingested, originals):
+    use_case = CompleteUploadAnalysisUseCase(
+        get_feature_synthesizer(), get_feature_enricher(), get_analysis_use_case(engine),
+        get_analysis_repo(), get_settings().max_entities, is_offline_engine(engine))
+    return await use_case.execute(tenant, schema, ingested.dataframes, originals,
+                                 get_sector_core(tenant.sector, engine))
+
+
+@router.post("/confirm-mapping", response_model=AnalysisResponse)
+async def confirm_mapping(payload: ConfirmSchemaRequest):
+    tenant = await get_tenant_repo().get(payload.tenant_id)
+    if tenant is None:
+        raise HTTPException(404, "Workspace not found")
+
+    async def resume(session, schema):
+        engine = resolve_engine(session.engine)
+        parsed = ingest([(f.filename, b64decode(f.content_base64)) for f in session.files])
+        return await complete_analysis(tenant, engine, schema, parsed, session.files)
+
+    memory, pending = review_repositories()
+    try:
+        return await ConfirmSchemaMappingUseCase(memory, pending, resume).execute(payload)
+    except ReviewSessionMissing as exc:
+        raise HTTPException(410, str(exc)) from exc
+    except ReviewSessionBusy as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 class DemoFile(BaseModel):

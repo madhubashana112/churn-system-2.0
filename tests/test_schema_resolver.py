@@ -131,9 +131,10 @@ class TestClassificationRules:
 
 
 class TestResolverFailures:
-    def test_no_id_column_anywhere_is_an_error(self):
-        with pytest.raises(ValueError, match="primary entity key"):
-            resolve({"a.csv": "amount,status\n10.0,PAID\n"})
+    def test_no_id_column_requires_human_review(self):
+        result = resolve({"a.csv": "amount,status\n10.0,PAID\n"})
+        assert result.status == "REQUIRES_HUMAN_REVIEW"
+        assert any("customer ID" in reason for reason in result.review_reasons)
 
     def test_an_empty_sample_set_is_an_error(self):
         with pytest.raises(ValueError, match="at least one file sample"):

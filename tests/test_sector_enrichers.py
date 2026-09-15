@@ -114,7 +114,8 @@ class TestTelecomTopUpIntervals:
         assert result["recharge_count"] == 4
         assert result["avg_recharge_gap_days"] == pytest.approx(13.33, abs=0.01)
         assert result["max_recharge_gap_days"] == pytest.approx(20.0)
-        assert result["days_since_last_recharge"] == pytest.approx(0.0)
+        # Date-only recharge is midnight; the fixed reference is noon UTC.
+        assert result["days_since_last_recharge"] == pytest.approx(0.5)
         assert result["expanding_topup_intervals"] is True
 
     def test_steady_gaps_are_not_flagged(self):

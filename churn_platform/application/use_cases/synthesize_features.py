@@ -33,6 +33,7 @@ class SynthesizeFeaturesUseCase:
         dataframes: Dict[str, pd.DataFrame],
         sector: Optional[str] = None,
     ) -> List[CustomerFeatures]:
+        schema, dataframes = self.synthesizer.prepare(schema, dataframes)
         features = self.synthesizer.synthesize(schema, dataframes)
         if sector and self.enricher is not None:
             features = self.enricher(sector, features, schema, dataframes)
