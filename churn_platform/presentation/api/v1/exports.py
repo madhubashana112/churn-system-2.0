@@ -2,6 +2,9 @@
 import csv
 import io
 import json
+import base64
+import zipfile
+import re
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +13,7 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 from churn_platform.presentation.api.auth import require_tenant
-from churn_platform.presentation.api.dependencies import get_analysis_repo
+from churn_platform.presentation.api.dependencies import get_analysis_repo, get_tenant_repo
 
 router = APIRouter(prefix="/exports", tags=["Exports"], dependencies=[Depends(require_tenant)])
 
@@ -26,16 +29,36 @@ def spreadsheet_text(value):
 @router.get("")
 async def export_analysis(
     tenant_id: str,
-    format: Literal["csv", "xlsx"] = "csv",
+    format: Literal["csv", "xlsx", "pdf", "zip"] = "csv",
     tier: Literal["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"] = "ALL",
     search: str = Query("", max_length=200),
 ):
     run = await get_analysis_repo().latest(tenant_id)
     if run is None:
         raise HTTPException(404, "Run an analysis before exporting data")
+    if format == "zip":
+        if not run.original_files:
+            raise HTTPException(404, "Original files are unavailable for this older analysis. Upload and analyze the files again to enable this download.")
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for index, original in enumerate(run.original_files, 1):
+                name = original.filename.replace("\\", "/").rsplit("/", 1)[-1]
+                name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip(". ") or "upload"
+                archive.writestr(f"{index:03d}/{name}", base64.b64decode(original.content_base64))
+        return Response(buffer.getvalue(), media_type="application/zip", headers={
+            "Content-Disposition": 'attachment; filename="original-uploads.zip"', "Cache-Control": "no-store"})
+    selected = [o for o in sorted(run.outcomes, key=lambda o: o.prediction.churn_probability, reverse=True)
+                if (tier == "ALL" or o.prediction.risk_tier == tier) and search.lower() in o.prediction.entity_id.lower()]
+    if format == "pdf":
+        from churn_platform.presentation.pdf_report import analysis_pdf
+        from starlette.concurrency import run_in_threadpool
+        tenant = await get_tenant_repo().get(tenant_id)
+        content = await run_in_threadpool(analysis_pdf, run, selected, tenant.name if tenant else run.sector, tier, search)
+        return Response(content, media_type="application/pdf", headers={
+            "Content-Disposition": 'attachment; filename="churn-analysis.pdf"', "Cache-Control": "no-store"})
     rows = [["Customer ID", "Churn probability", "Risk tier", "Primary drivers", "Root cause",
              "Action", "Channel", "Recommendation", "Sector", "Analyzed at (UTC)", "Engine", "Evidence (JSON)"]]
-    for outcome in sorted(run.outcomes, key=lambda o: o.prediction.churn_probability, reverse=True):
+    for outcome in selected:
         p, action = outcome.prediction, outcome.playbook
         if (tier != "ALL" and p.risk_tier != tier) or search.lower() not in p.entity_id.lower():
             continue

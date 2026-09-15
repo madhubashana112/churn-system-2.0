@@ -48,7 +48,7 @@
                 if (!response.ok) { const data = await response.json(); throw new Error(data.detail || 'Export failed'); }
                 const url = URL.createObjectURL(await response.blob());
                 const link = document.createElement('a'); link.href = url;
-                link.download = 'churn-analysis.' + format; document.body.append(link); link.click(); link.remove();
+                link.download = format === 'zip' ? 'original-uploads.zip' : 'churn-analysis.' + format; document.body.append(link); link.click(); link.remove();
                 setTimeout(() => URL.revokeObjectURL(url), 30000);
                 status.textContent = 'Export downloaded.';
             } catch (err) { status.textContent = err.message; }

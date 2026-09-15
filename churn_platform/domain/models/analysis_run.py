@@ -30,10 +30,16 @@ class EntityOutcome(BaseModel):
     features: Dict[str, Any] = Field(default_factory=dict)
 
 
+class OriginalUpload(BaseModel):
+    filename: str
+    content_base64: str
+
+
 class AnalysisRun(BaseModel):
     tenant_id: str
     sector: str
     schema_mapping: SchemaMapping
+    original_files: List[OriginalUpload] = Field(default_factory=list)
     outcomes: List[EntityOutcome] = Field(default_factory=list)
     entities_uploaded: int = 0
     entities_analyzed: int = 0

@@ -19,7 +19,7 @@ from churn_platform.application.use_cases.resolve_multi_sheet_schema import (
 )
 from churn_platform.application.use_cases.synthesize_features import SynthesizeFeaturesUseCase
 from churn_platform.config import get_settings
-from churn_platform.domain.models.analysis_run import AnalysisRun, EntityOutcome
+from churn_platform.domain.models.analysis_run import AnalysisRun, EntityOutcome, OriginalUpload
 from churn_platform.domain.models.sector import canonical_sector_label
 from churn_platform.infrastructure.parsers.demo_data import demo_files
 from churn_platform.infrastructure.parsers.file_ingestion import UnsupportedFileError, ingest
@@ -60,7 +60,17 @@ async def upload_and_analyze(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    uploads = [(file.filename, await file.read()) for file in files if file.filename]
+    uploads = []
+    total_bytes = 0
+    max_upload_bytes = 4 * 1024 * 1024
+    for file in files:
+        if not file.filename:
+            continue
+        content = await file.read(max_upload_bytes - total_bytes + 1)
+        total_bytes += len(content)
+        if total_bytes > max_upload_bytes:
+            raise HTTPException(413, "Upload up to 4 MB of files per analysis.")
+        uploads.append((file.filename, content))
     if not uploads:
         raise HTTPException(status_code=400, detail="No files were received")
 
@@ -110,6 +120,7 @@ async def upload_and_analyze(
         tenant_id=tenant.tenant_id,
         sector=tenant.sector,
         schema_mapping=schema,
+        original_files=[OriginalUpload(filename=name, content_base64=b64encode(content).decode("ascii")) for name, content in uploads],
         outcomes=[
             EntityOutcome(prediction=pred, playbook=playbook, features=features_by_id.get(pred.entity_id, {}))
             for pred, playbook in results

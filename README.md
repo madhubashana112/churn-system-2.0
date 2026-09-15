@@ -11,9 +11,14 @@ customer list and a retention playbook per customer come out.
 
 - **Login and sign-up:** email/password accounts, salted scrypt password hashes, seven-day
   HttpOnly sessions, logout revocation, rate limits, and account-owned workspaces.
-- **Exports:** CSV and formatted Excel downloads from the customer table. Exports respect
+- **Exports:** CSV, formatted Excel, PDF reports and original-file ZIP downloads from the customer table. Exports respect
   the tier and ID search filters and include every matching row, not just the table's first
   250. They include scores, drivers, recommendations, evidence and analysis metadata.
+  PDF reports contain a summary and customer-by-customer recommendations. ZIP downloads
+  contain every original file from the latest successful analysis, with unchanged contents,
+  in numbered folders to keep duplicate filenames distinct. ZIP downloads ignore table filters.
+  Older analyses need a fresh upload to make originals available. Uploads are limited to 4 MB
+  total per analysis. Originals have the same retention/access rules as the saved analysis.
   Spreadsheet formula-like text is escaped; CSV probabilities are fractions (0.8 = 80%).
 - **Dark mode:** toggle on account, onboarding, dashboard and customer pages. Defaults to
   Light Mode and remembers your explicit choice, including chart colors. Account pages
@@ -249,7 +254,7 @@ Missing/expired sessions return 401; another account's workspace returns 404. Br
 must be same-origin. Account pages and private responses use `Cache-Control: no-store`.
 
 `GET /api/v1/exports?tenant_id=ID&format=csv&tier=ALL&search=` downloads the current analysis.
-Use `format=xlsx` for Excel. Tier accepts ALL, CRITICAL, HIGH, MEDIUM or LOW. Until an analysis
+Use `format=xlsx` for Excel, `format=pdf` for a printable report, or `format=zip` for original files. Tier accepts ALL, CRITICAL, HIGH, MEDIUM or LOW. Until an analysis
 exists, export returns 404. Empty filters produce a header-only file.
 
 Local state lives in `.local/churn.sqlite3` (ignored by Git). Back up this file to retain
@@ -268,7 +273,7 @@ Do not commit databases, user uploads, sessions or environment secrets.
 python -m pytest -q
 ```
 
-348 tests, none of which touch the network — the live-gateway tests mount a stub
+351 tests, none of which touch the network — the live-gateway tests mount a stub
 chat-completions app into the client's own transport, so retries and reply parsing are
 exercised offline, and `tests/conftest.py` stops `Settings` reading `api_key.env` before any
 test module is imported, so a real key on disk cannot turn the suite into metered live calls.

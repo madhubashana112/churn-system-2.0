@@ -101,7 +101,7 @@
                     <span class="spinner"></span> <span id="upload-progress-text">Working&hellip;</span>
                 </span>
             </div>
-            <p id="engine-note" class="text-sm text-gray-500 mt-2"></p>
+            <p id="engine-note" class="text-sm text-gray-500 mt-2"></p><p class="field-hint">Maximum 4 MB per analysis. Original files are saved with the analysis for download.</p>
         </div>
     </section>
 
@@ -177,6 +177,8 @@
                 <div class="table-tools">
                     <button class="btn btn--ghost" type="button" data-export="csv">Export CSV</button>
                     <button class="btn btn--ghost" type="button" data-export="xlsx">Export Excel</button>
+                    <button class="btn btn--ghost" type="button" data-export="pdf">Export PDF</button>
+                    <button class="btn btn--ghost" type="button" data-export="zip">Original files (ZIP)</button>
                     <label class="text-xs text-gray-500 font-semibold uppercase tracking-wide" for="tier-filter">Tier</label>
                     <select id="tier-filter" class="select">
                         <option value="ALL" selected>All tiers</option>
@@ -196,7 +198,7 @@
                 </table>
             </div>
             <div class="panel__body panel__body--tight">
-                <p class="text-xs text-gray-500" id="row-count-note"></p><p class="field-hint">Exports include all customers matching the tier and ID filters, including rows beyond the table limit.</p><p id="export-status" role="status" class="field-hint"></p>
+                <p class="text-xs text-gray-500" id="row-count-note"></p><p class="field-hint">CSV, Excel and PDF exports include all customers matching the tier and ID filters, including rows beyond the table limit. ZIP includes all original files from the latest analysis, unchanged.</p><p id="export-status" role="status" class="field-hint"></p>
             </div>
         </section>
     </div>
