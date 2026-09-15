@@ -415,3 +415,24 @@ class TestTableStem:
     ])
     def test_stems_are_stable_feature_prefixes(self, name, expected):
         assert table_stem(name) == expected
+
+
+@pytest.mark.parametrize("dtype", [object, "str", "string"])
+def test_text_features_skip_missing_cells_and_preserve_real_complaints(dtype):
+    from unittest.mock import Mock
+    from churn_platform.infrastructure.parsers.text_features import KeywordSentimentScorer
+    frame = pd.DataFrame({"customer_id": ["u1", "u1", "u2"],
+        "subject": pd.Series(["cancel account", None, None], dtype=dtype),
+        "notes": pd.Series([None, "refund delayed", None], dtype=dtype)})
+    original = frame.copy(deep=True)
+    schema = SchemaMapping(primary_entity_key="customer_id", tables=[
+        TableClassification(file_name="disputes.csv", role="UNSTRUCTURED_TEXT", primary_entity_key="customer_id")])
+    scorer = Mock(wraps=KeywordSentimentScorer())
+    synth = PandasFeatureSynthesizer()
+    synth.sentiment_scorer = scorer
+    result = by_entity(synth.synthesize(schema, {"disputes.csv": frame}))
+    assert result["u1"]["has_negative_text"] is True
+    assert result["u2"]["text_churn_score"] == 0
+    assert scorer.score_texts.call_args_list[0].args[0] == ["cancel account", "refund delayed"]
+    assert scorer.score_texts.call_args_list[1].args[0] == [""]
+    pd.testing.assert_frame_equal(frame, original)

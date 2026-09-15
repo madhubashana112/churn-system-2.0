@@ -573,7 +573,13 @@ class PandasFeatureSynthesizer(IFeatureSynthesizer):
 
         # Concatenate every free-text column per record so a table carrying both
         # a subject and a notes body is mined as one utterance.
-        combined = df[text_columns].astype(str).agg(" ".join, axis=1)
+        # pandas 3 preserves missing values through astype(str). Skip them
+        # explicitly so joins cannot receive NaN/pd.NA or invent "nan" text.
+        combined = pd.Series(
+            (" ".join(str(value) for value in row if pd.notna(value))
+             for row in df[text_columns].itertuples(index=False, name=None)),
+            index=df.index, dtype=object,
+        )
         grouped = combined.groupby(df[key]).apply(list, include_groups=False)
 
         for entity_id, texts in grouped.items():
