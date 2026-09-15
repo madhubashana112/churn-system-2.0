@@ -33,6 +33,7 @@ KEY_FIELDS = (
     "HF_TOKEN",
     "OPENROUTER_API_KEY",
     "AI_API_KEY",
+    "GEMINI_API_KEY",
 )
 
 
@@ -402,3 +403,21 @@ def test_a_sector_core_survives_a_fenced_reply_with_lowercase_tiers():
     assert prediction.risk_tier == "CRITICAL"
     assert prediction.primary_drivers == ["usage collapse"]
     assert playbook.channel == "Email"
+
+
+def test_gemini_key_uses_google_endpoint_and_model():
+    resolved = settings(gemini_api_key="gemini-test-key")
+    assert resolved.api_provider == "gemini"
+    assert resolved.api_key == "gemini-test-key"
+    assert resolved.resolved_base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
+    assert resolved.resolved_model == "gemini-3.6-flash"
+    assert resolved.resolved_batch_size == 25
+
+
+def test_gemini_builds_live_gateway_and_all_sector_cores():
+    from churn_platform.presentation.api.dependencies import build_engine_registry
+    registry = build_engine_registry(settings(gemini_api_key="gemini-test-key"))
+    assert registry.default == "ai"
+    assert set(registry.cores["ai"]) == {"saas", "telecom", "fintech"}
+    assert registry.gateways["ai"].model == "gemini-3.6-flash"
+    assert str(registry.gateways["ai"].client.base_url).startswith("https://generativelanguage.googleapis.com/")

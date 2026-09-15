@@ -67,7 +67,7 @@ class QwenGateway(IAIGateway):
             # opaque 401 from the API with no hint that configuration is missing.
             raise EnvironmentError(
                 "No AI provider key found. Set GROQ_API_KEY (free tier, no card "
-                "required), HF_TOKEN, OPENROUTER_API_KEY or DASHSCOPE_API_KEY in "
+                "required), GEMINI_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or DASHSCOPE_API_KEY in "
                 "the environment or in .env, or set QWEN_MODE=mock to run the "
                 "platform offline."
             )
@@ -84,6 +84,10 @@ class QwenGateway(IAIGateway):
         self.model = model or settings.resolved_model
 
     async def generate_json(self, system_prompt: str, user_prompt: str) -> dict:
+        options = {}
+        if self.model.startswith("gemini-") and self.client.base_url.host == "generativelanguage.googleapis.com":
+            # Bound thinking latency for interactive schema and batch analysis.
+            options["reasoning_effort"] = "low"
         try:
             completion = await self.client.chat.completions.create(
                 model=self.model,
@@ -92,6 +96,7 @@ class QwenGateway(IAIGateway):
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
+                **options,
             )
         except Exception:
             logger.exception("Error calling the %s API", self.model)

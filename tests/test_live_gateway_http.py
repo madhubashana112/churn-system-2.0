@@ -141,3 +141,19 @@ def test_exhausted_retries_surface_as_an_error_rather_than_a_silent_empty_run():
     with pytest.raises(RateLimitError):
         asyncio.run(gateway.generate_json("system", "user"))
     assert state["calls"] == 2  # the attempt plus one retry
+
+def test_gemini_json_requests_use_low_reasoning_without_changing_other_hosts():
+    async def exercise():
+        state = {'fence': False}
+        gateway = QwenGateway(api_key='synthetic-test-key', base_url='https://generativelanguage.googleapis.com/v1', model='gemini-3.6-flash', max_retries=0)
+        await gateway.client.close()
+        gateway.client = AsyncOpenAI(api_key='synthetic-test-key', base_url='https://generativelanguage.googleapis.com/v1',
+            http_client=httpx.AsyncClient(transport=httpx.ASGITransport(app=stub_host(state))), max_retries=0)
+        try:
+            result = await gateway.generate_json('Return JSON', 'Synthetic test')
+            assert result == REPLY
+            assert state['bodies'][0]['reasoning_effort'] == 'low'
+            assert state['bodies'][0]['response_format'] == {'type':'json_object'}
+        finally:
+            await gateway.client.close()
+    asyncio.run(exercise())

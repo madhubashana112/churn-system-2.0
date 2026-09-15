@@ -74,13 +74,20 @@ PROVIDERS: Dict[str, Provider] = {
         model="openai/gpt-oss-120b:free",
         key_fields=("openrouter_api_key",),
     ),
+    "gemini": Provider(
+        name="gemini",
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        model="gemini-3.6-flash",
+        key_fields=("gemini_api_key",),
+        batch_size=25,
+    ),
     # A generic key with no host attached: the caller has to say where it goes.
     "custom": Provider(name="custom", base_url="", model="", key_fields=("ai_api_key",)),
 }
 
 # Highest precedence first, so a key already in use keeps winning after more
 # providers are configured.
-PROVIDER_ORDER = ("dashscope", "groq", "huggingface", "openrouter", "custom")
+PROVIDER_ORDER = ("dashscope", "groq", "huggingface", "openrouter", "gemini", "custom")
 
 
 class Settings(BaseSettings):
@@ -102,6 +109,7 @@ class Settings(BaseSettings):
     groq_api_key: Optional[str] = None
     hf_token: Optional[str] = None
     openrouter_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
     ai_api_key: Optional[str] = None
 
     batch_size: int = 10

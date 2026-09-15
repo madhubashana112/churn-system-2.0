@@ -81,7 +81,7 @@ def build_ai_gateway(settings: Optional[Settings] = None) -> IAIGateway:
     if settings.api_key:
         return _live_gateway(settings)
     logger.warning(
-        "No AI provider key found (GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
+        "No AI provider key found (GEMINI_API_KEY, GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
         "DASHSCOPE_API_KEY); falling back to MockQwenGateway. Predictions are "
         "computed locally from the uploaded features and are not model output."
     )
@@ -143,7 +143,7 @@ def build_engine_registry(settings: Settings) -> EngineRegistry:
         ai_gateway = _live_gateway(settings)
     else:
         logger.warning(
-            "No AI provider key found (GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
+            "No AI provider key found (GEMINI_API_KEY, GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
             "DASHSCOPE_API_KEY); the AI engine is unavailable. Predictions from the "
             "system engine are computed locally from the uploaded features and are "
             "not model output."
@@ -200,7 +200,7 @@ def resolve_engine(requested: Optional[str] = None) -> str:
     if _REGISTRY.gateways[requested] is None:
         raise ValueError(
             f"The {ENGINE_AI} engine is not available: no AI provider key is "
-            "configured. Add GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
+            "configured. Add GEMINI_API_KEY, GROQ_API_KEY, HF_TOKEN, OPENROUTER_API_KEY or "
             "DASHSCOPE_API_KEY to api_key.env, or run this analysis on the "
             f"{ENGINE_SYSTEM} engine."
         )

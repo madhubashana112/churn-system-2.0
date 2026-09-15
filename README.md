@@ -221,6 +221,7 @@ populated end to end.
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `GEMINI_API_KEY` | unset | Gemini AI analysis (`gemini-3.6-flash`) through Google's compatible endpoint |
 | `GROQ_API_KEY` | unset | Live client against Groq's free tier (`api.groq.com/openai/v1`) |
 | `HF_TOKEN` | unset | Live client against Hugging Face's Inference Providers router |
 | `OPENROUTER_API_KEY` | unset | Live client against OpenRouter's free models |
@@ -354,3 +355,18 @@ the features sent to the configured AI model. The system scorer remains determin
   every upload, and other accounts cannot access sessions or alias memory.
 - Analysis windows always use `REFERENCE_DATE = 2025-06-01T12:00:00Z`, independent
   of upload date and wall clock. Original files remain unchanged for ZIP export.
+
+
+### Gemini AI analysis
+
+Set `GEMINI_API_KEY` in the server environment (Vercel production secrets) or
+in the ignored local `.env`. This enables the AI model for schema discovery,
+churn predictions and retention recommendations. The key never goes to the
+browser. The provider defaults to `gemini-3.6-flash`; `QWEN_MODEL` remains a
+backward-compatible model override. Uploads sent to the AI engine send sample
+rows and synthesized customer features to Google. The system engine stays local.
+Google's compatibility API: https://ai.google.dev/gemini-api/docs/openai
+
+Gemini uses batches of 25 customers and low reasoning effort for interactive
+latency. The Vercel function allows up to 300 seconds; very large uploads or
+provider throttling can still exceed that limit.

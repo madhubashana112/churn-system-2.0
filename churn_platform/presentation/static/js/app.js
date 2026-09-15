@@ -946,7 +946,7 @@
             ? `AI model: ${aiModelName}, ${status.batch_size} customers per call. ` +
               'A full 100-customer base takes minutes on a free tier, and a hosted ' +
               'function may time out before it finishes \u2014 the system model answers in seconds.'
-            : 'AI model unavailable: no provider key is configured. Add GROQ_API_KEY ' +
+            : 'AI model unavailable: no provider key is configured. Add GEMINI_API_KEY or GROQ_API_KEY ' +
               '(or HF_TOKEN, OPENROUTER_API_KEY, DASHSCOPE_API_KEY) to api_key.env to enable it. ' +
               'The system model scores locally, deterministically, in seconds.';
         syncUploadButtons();
