@@ -5,8 +5,9 @@ class ReviewSessionMissing(ValueError): pass
 class ReviewSessionBusy(ValueError): pass
 
 class ConfirmSchemaMappingUseCase:
-    def __init__(self, memory: ITenantSchemaMemoryRepository, pending: IPendingUploadRepository, analyze):
+    def __init__(self, memory: ITenantSchemaMemoryRepository, pending: IPendingUploadRepository, analyze, validate_schema=None):
         self.memory, self.pending, self.analyze = memory, pending, analyze
+        self.validate_schema = validate_schema
 
     async def execute(self, request):
         tenant_id, session_id = request.tenant_id, request.upload_session_id
@@ -39,6 +40,10 @@ class ConfirmSchemaMappingUseCase:
             table.primary_entity_key = next((c.source_column for c in mapped if c.canonical_role == "CUSTOMER_ID"), "")
             table.timestamp_column = next((c.source_column for c in mapped if c.canonical_role == "TIMESTAMP"), None)
             table.noise_columns = [c.source_column for c in mapped if c.canonical_role == "NOISE_IGNORE"]
+        if self.validate_schema:
+            issues = self.validate_schema(schema, session.files)
+            if issues:
+                raise ValueError("; ".join(issues))
         schema.assess(session.sector)
         if schema.status == REQUIRES_HUMAN_REVIEW:
             raise ValueError("; ".join(schema.review_reasons))

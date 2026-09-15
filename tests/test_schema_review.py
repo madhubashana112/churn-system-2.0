@@ -462,3 +462,35 @@ def test_user_scenarios_resume_with_semantic_names_and_supporting_evidence(clien
         assert features['additional_attributes']['export.csv']['dropped_calls_30d']['numeric_summary']['max']==12
     assert submit()['requires_human_review'] is False
     assert sum('Data Engineer' in system for system,_ in calls)==1
+
+@pytest.mark.parametrize('remembered',[True,False])
+def test_invalid_amount_role_returns_to_review_and_cannot_be_confirmed(client_tenant,monkeypatch,remembered):
+    from churn_platform.presentation.api.v1 import upload as api
+    client,tenant=client_tenant
+    raw=b'account_id,timestamp,swipe_id,amount\na1,2025-05-30,1,$49.99\na1,2025-05-30,2,$20.00\na1,2025-05-30,3,$15.00\na1,2025-05-30,SWIPE004,$9.00\n'
+    bad=SchemaMapping(primary_entity_key='account_id',tables=[TableClassification(file_name='card_swipes.csv',role='TRANSACTIONAL',primary_entity_key='account_id',timestamp_column='timestamp',columns=[column('account_id','CUSTOMER_ID'),column('timestamp','TIMESTAMP'),column('swipe_id','TRANSACTION_AMOUNT'),column('amount','ATTRIBUTE')])])
+    memory=TenantSchemaMemoryRepository()
+    if remembered:
+        run(memory.save(tenant,bad))
+    else:
+        resolver=AsyncMock(); resolver.resolve.return_value=bad
+        monkeypatch.setattr(api,'get_schema_resolver',lambda *args:resolver)
+    response=client.post('/api/v1/upload/analyze',data={'tenant_id':tenant,'engine':'system'},files={'files':('card_swipes.csv',raw)})
+    assert response.status_code==200,response.text
+    review=response.json()
+    assert review['requires_human_review']
+    offending=review['schema_mapping']['tables'][0]['columns'][2]
+    assert offending['confidence']==0 and 'SWIPE004' in offending['sample_values']
+    choices=[{'file_name':'card_swipes.csv','source_column':c.source_column,'canonical_role':c.canonical_role} for c in bad.tables[0].columns]
+    payload={'tenant_id':tenant,'upload_session_id':review['upload_session_id'],'mappings':choices}
+    before=run(memory.get(tenant,['card_swipes.csv']))
+    rejected=client.post('/api/v1/upload/confirm-mapping',json=payload)
+    assert rejected.status_code==400 and 'swipe_id' in rejected.json()['detail']
+    assert run(memory.get(tenant,['card_swipes.csv']))==before
+    choices[2]['canonical_role']='ATTRIBUTE'
+    choices[3]['canonical_role']='TRANSACTION_AMOUNT'
+    fixed=client.post('/api/v1/upload/confirm-mapping',json=payload)
+    assert fixed.status_code==200,fixed.text
+    saved=run(memory.get(tenant,['card_swipes.csv']))['card_swipes.csv']['columns']
+    assert saved['swipe_id']['canonical_role']=='ATTRIBUTE'
+    assert saved['amount']['canonical_role']=='TRANSACTION_AMOUNT'

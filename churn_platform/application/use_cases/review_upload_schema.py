@@ -6,12 +6,15 @@ from churn_platform.domain.interfaces.i_schema_resolver import ISchemaResolver
 from churn_platform.application.dtos.schema_review_dto import SchemaReviewResponse
 
 class ReviewUploadSchemaUseCase:
-    def __init__(self, resolver: ISchemaResolver, memory: ITenantSchemaMemoryRepository, pending: IPendingUploadRepository):
+    def __init__(self, resolver: ISchemaResolver, memory: ITenantSchemaMemoryRepository, pending: IPendingUploadRepository, validate_schema=None):
         self.resolver, self.memory, self.pending = resolver, memory, pending
+        self.validate_schema = validate_schema
 
     async def execute(self, tenant, files, samples, engine, force_review=False):
         remembered = await self.memory.get(tenant.tenant_id, list(samples))
         schema = await self.resolver.resolve(samples, remembered=remembered)
+        if self.validate_schema:
+            self.validate_schema(schema, files)
         schema.assess(tenant.sector)
         if schema.status != REQUIRES_HUMAN_REVIEW and not force_review:
             return schema

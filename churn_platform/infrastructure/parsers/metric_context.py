@@ -38,3 +38,29 @@ def metric_evidence(series):
                 "minimum_observation": values[numbers.index(lo)],
                 "maximum_observation": values[numbers.index(hi)]}
     return evidence
+
+
+def review_amount_mappings(schema, dataframes):
+    """Check proposed/remembered amount roles against every uploaded row."""
+    issues = []
+    for table in schema.tables:
+        frame = dataframes.get(table.file_name)
+        if frame is None:
+            continue
+        for column in table.columns:
+            if column.canonical_role != "TRANSACTION_AMOUNT" or column.source_column not in frame:
+                continue
+            values = frame[column.source_column]
+            invalid = values.notna() & values.astype(str).str.strip().ne("") & values.map(currency_number).isna()
+            if not invalid.any():
+                continue
+            example = str(values[invalid].iloc[0])[:200]
+            message = (f"{table.file_name}: {column.source_column} cannot be Transaction Amount: "
+                       f"{int(invalid.sum())} non-empty values are not numeric amounts. "
+                       "Choose Attribute or Ignore for identifiers, and map the actual amount column to Transaction Amount.")
+            column.confidence = 0.0
+            column.reasoning = message
+            column.sample_values = list(dict.fromkeys([example] + column.sample_values))[:3]
+            column.confidence_status()
+            issues.append(message)
+    return issues

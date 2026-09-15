@@ -19,6 +19,7 @@ from churn_platform.application.use_cases.confirm_schema_mapping import ConfirmS
 from churn_platform.application.dtos.schema_review_dto import SchemaReviewResponse, ConfirmSchemaRequest
 from churn_platform.infrastructure.persistence.redis_repos import TenantSchemaMemoryRepository, PendingUploadRepository
 from churn_platform.config import get_settings
+from churn_platform.infrastructure.parsers.metric_context import review_amount_mappings
 from churn_platform.domain.models.analysis_run import OriginalUpload
 from churn_platform.domain.models.sector import canonical_sector_label
 from churn_platform.infrastructure.parsers.demo_data import demo_files
@@ -88,12 +89,18 @@ async def upload_and_analyze(
     originals = [OriginalUpload(filename=name, content_base64=b64encode(content).decode("ascii")) for name, content in uploads]
     memory, pending = review_repositories()
     schema = await ReviewUploadSchemaUseCase(
-        get_schema_resolver(chosen_engine), memory, pending
+        get_schema_resolver(chosen_engine), memory, pending,
+        validate_schema=lambda schema, files: review_amount_mappings(schema, ingested.dataframes)
     ).execute(tenant, originals, ingested.samples, chosen_engine, force_review=review_mapping)
     if isinstance(schema, SchemaReviewResponse):
         return schema
 
     return await complete_analysis(tenant, chosen_engine, schema, ingested, originals)
+
+
+def validate_uploaded_amounts(schema, files):
+    parsed = ingest([(f.filename, b64decode(f.content_base64)) for f in files])
+    return review_amount_mappings(schema, parsed.dataframes)
 
 
 def review_repositories():
@@ -126,7 +133,7 @@ async def confirm_mapping(payload: ConfirmSchemaRequest):
 
     memory, pending = review_repositories()
     try:
-        return await ConfirmSchemaMappingUseCase(memory, pending, resume).execute(payload)
+        return await ConfirmSchemaMappingUseCase(memory, pending, resume, validate_schema=validate_uploaded_amounts).execute(payload)
     except ReviewSessionMissing as exc:
         raise HTTPException(410, str(exc)) from exc
     except ReviewSessionBusy as exc:
